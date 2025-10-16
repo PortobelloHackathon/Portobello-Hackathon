@@ -60,7 +60,10 @@
           <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
             <h3 class="text-lg font-semibold text-slate-800 mb-4">Current Stock</h3>
 
-            <!-- CSV upload removed per user request -->
+            <div class="flex items-center gap-3 mb-4">
+              <button id="chooseDatetime" class="px-3 py-1 bg-slate-100 rounded border">Choose date/time</button>
+              <div id="dataStatus" class="text-sm text-slate-500"></div>
+            </div>
 
             <div id="warnMissing" class="mb-3 text-sm text-amber-700"></div>
 
@@ -85,6 +88,25 @@
               </div>
               <div id="categoryLegend" class="flex gap-3 flex-wrap text-sm"></div>
             </div>
+            
+            <!-- Modal: select datetime -->
+            <div id="dtModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40">
+              <div class="bg-white rounded p-4 w-96">
+                <h3 class="font-semibold mb-2">Select date/time to view</h3>
+                <select id="datetimeSelect" class="w-full border p-2 mb-3"></select>
+                <div class="flex justify-end gap-2">
+                  <button id="dtCancel" class="px-3 py-1 rounded border">Cancel</button>
+                  <button id="dtView" class="px-3 py-1 bg-slate-700 text-white rounded">View</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <h4 class="text-md font-medium text-slate-700 mb-2">Selected timestamp: categories</h4>
+              <div class="rounded border bg-white p-3 mb-2">
+                <canvas id="categoryBarChart" class="w-full h-48"></canvas>
+              </div>
+            </div>
           </section>
         </div>
       </div>
@@ -94,6 +116,18 @@
   <!-- Optional shared scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script>
+    // Simple CSV parser (small inline, supports quoted fields)
+    function parseCSV(text) {
+      const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim()!=="");
+      const parseLine = (line) => {
+        const res = []; let cur=''; let inQ=false;
+        for (let i=0;i<line.length;i++){ const ch=line[i]; if(ch==='"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ=!inQ; continue;} if(ch===',' && !inQ){ res.push(cur); cur=''; continue;} cur+=ch; } res.push(cur); return res; };
+      if(lines.length===0) return {columns:[],rows:[]};
+      const headers = parseLine(lines[0]).map(h=>h.trim());
+      const rows = lines.slice(1).map(l=>{ const parts=parseLine(l); const obj={}; for(let i=0;i<headers.length;i++) obj[headers[i]]=parts[i]!==undefined?parts[i].trim():''; return obj; });
+      return {columns: headers, rows};
+    }
+
     // Helper: render table from parsed CSV (upload UI removed)
     const warn = document.getElementById('warnMissing');
     const tableHead = document.getElementById('dataTableHead');
@@ -103,6 +137,14 @@
   const lossCtx = document.getElementById('lossChart');
   let lossChart = null;
   const legendEl = document.getElementById('categoryLegend');
+  const dtModal = document.getElementById('dtModal');
+  const datetimeSelect = document.getElementById('datetimeSelect');
+  const chooseDatetime = document.getElementById('chooseDatetime');
+  const dtCancel = document.getElementById('dtCancel');
+  const dtView = document.getElementById('dtView');
+  const dataStatus = document.getElementById('dataStatus');
+  const categoryBarCtx = document.getElementById('categoryBarChart');
+  let csvData = null; // parsed CSV
 
     function clearTable() {
       tableHead.innerHTML = '';
@@ -228,7 +270,43 @@
 
       buildVolumeChart(rows, volCols, labelCol);
       buildLossChart(rows, volCols, labelCol, categoryCol);
+      // populate datetime select if 'datetime' column exists
+      if (columns.includes('datetime')) {
+        datetimeSelect.innerHTML = '';
+        rows.forEach(r => {
+          const opt = document.createElement('option'); opt.value = r['datetime']; opt.textContent = r['datetime']; datetimeSelect.appendChild(opt);
+        });
+        dataStatus.textContent = `${rows.length} timestamps loaded`;
+      }
     }
+
+    // load CSV from repo file tiles6.csv
+    fetch('tiles6.csv').then(r=>r.text()).then(txt=>{
+      try{
+        csvData = parseCSV(txt);
+        handleParsed(csvData);
+      }catch(e){ dataStatus.textContent = 'Error loading CSV: '+e.message }
+    }).catch(e=>{ dataStatus.textContent = 'Could not fetch tiles6.csv: '+e.message });
+
+    // modal handlers
+    chooseDatetime.addEventListener('click', ()=>{ dtModal.classList.remove('hidden'); dtModal.classList.add('flex'); });
+    dtCancel.addEventListener('click', ()=>{ dtModal.classList.add('hidden'); dtModal.classList.remove('flex'); });
+    dtView.addEventListener('click', ()=>{
+      const ts = datetimeSelect.value; if(!csvData) return; const rows = csvData.rows.filter(r=>r.datetime===ts);
+      if(rows.length===0){ warn.textContent='No data for selected timestamp'; return; }
+      // render table with only selected rows
+      renderTable(csvData.columns, rows);
+      // build category bar chart for the selected timestamp: show specified vol columns
+      const volCols = detectVolumeColumns(csvData.columns);
+      const desired = ['vol_start','vol_press','vol_glaze','vol_kiln_out','vol_sort_out'];
+      const present = desired.filter(c=>volCols.includes(c));
+      const label = ts;
+      const values = present.map(c=> toNumber(rows[0][c]) );
+      // grey coloring for these categories
+      const bg = present.map(()=> '#e6e6e6');
+      new Chart(categoryBarCtx, { type:'bar', data:{ labels: present.map(p=>p.replace('vol_','').replace(/_/g,' ')), datasets:[{ label, data: values, backgroundColor: bg }] }, options:{ responsive:true, maintainAspectRatio:false } });
+      dtModal.classList.add('hidden'); dtModal.classList.remove('flex');
+    });
   </script>
 </body>
 </html>
