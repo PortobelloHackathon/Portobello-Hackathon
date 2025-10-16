@@ -69,30 +69,39 @@
             <canvas id="lossLineChart" class="w-full h-full"></canvas>
           </section>
 
-          <!-- Right: KPI donuts -->
-          <section class="col-span-12 lg:col-span-4 grid grid-cols-1 gap-4">
-            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-              <h3 class="text-sm font-medium text-slate-600 mb-2">Yield</h3>
-              <div class="flex items-center gap-4">
-                <canvas id="kpiDonut1" class="h-24 w-24"></canvas>
-                <div class="text-slate-600 text-sm">Good parts / total</div>
-              </div>
-            </div>
-            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-              <h3 class="text-sm font-medium text-slate-600 mb-2">Scrap Rate</h3>
-              <div class="flex items-center gap-4">
-                <canvas id="kpiDonut2" class="h-24 w-24"></canvas>
-                <div class="text-slate-600 text-sm">Scrap / input</div>
-              </div>
-            </div>
-            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-              <h3 class="text-sm font-medium text-slate-600 mb-2">On-Time</h3>
-              <div class="flex items-center gap-4">
-                <canvas id="kpiDonut3" class="h-24 w-24"></canvas>
-                <div class="text-slate-600 text-sm">Orders on schedule</div>
-              </div>
-            </div>
-          </section>
+          <!-- Right: KPI donuts (smaller, fixed-size) -->
+<section class="col-span-12 lg:col-span-4 grid grid-cols-1 gap-3">
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-3">
+    <h3 class="text-sm font-medium text-slate-600 mb-1">Yield</h3>
+    <div class="flex items-center gap-3">
+      <!-- fixed-size wrapper -->
+      <div class="shrink-0 w-16 h-16">
+        <canvas id="kpiDonut1" class="!w-full !h-full"></canvas>
+      </div>
+      <div class="text-slate-600 text-xs">Good parts / total</div>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-3">
+    <h3 class="text-sm font-medium text-slate-600 mb-1">Scrap Rate</h3>
+    <div class="flex items-center gap-3">
+      <div class="shrink-0 w-16 h-16">
+        <canvas id="kpiDonut2" class="!w-full !h-full"></canvas>
+      </div>
+      <div class="text-slate-600 text-xs">Scrap / input</div>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-3">
+    <h3 class="text-sm font-medium text-slate-600 mb-1">On-Time</h3>
+    <div class="flex items-center gap-3">
+      <div class="shrink-0 w-16 h-16">
+        <canvas id="kpiDonut3" class="!w-full !h-full"></canvas>
+      </div>
+      <div class="text-slate-600 text-xs">Orders on schedule</div>
+    </div>
+  </div>
+</section>
 
           <!-- Multi-ring donut -->
           <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[18rem]">
@@ -166,7 +175,14 @@
             cutout: '70%'
           }]
         },
-        options: { plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,   // <-- key for small fixed boxes
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+        }
       });
     }
 
