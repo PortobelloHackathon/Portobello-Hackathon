@@ -29,12 +29,11 @@
   </script>
 </head>
 
-<body class="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
+<body class="h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800 font-sans">
   <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
     <div class="mx-auto max-w-7xl px-6 py-5">
       <div class="flex items-baseline gap-2">
-        <h1 class="text-4xl font-extrabold tracking-tight text-pbBlue">Portobello</h1>
-        <span class="text-xl font-semibold text-pbBlue">America</span>
+  <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-16 object-contain" />
       </div>
     </div>
   </header>
@@ -61,11 +60,7 @@
           <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
             <h3 class="text-lg font-semibold text-slate-800 mb-4">Current Stock</h3>
 
-            <div class="flex items-center gap-3 mb-4">
-              <input id="csvFileInput" type="file" accept=".csv" class="" />
-              <button id="loadExample" class="px-3 py-1 bg-slate-100 rounded border">Load example CSV</button>
-              <div id="uploadStatus" class="text-sm text-slate-500"></div>
-            </div>
+            <!-- CSV upload removed per user request -->
 
             <div id="warnMissing" class="mb-3 text-sm text-amber-700"></div>
 
@@ -98,17 +93,12 @@
 
   <!-- Optional shared scripts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="assets/js/csv.js"></script>
   <script>
-    // Helper: render table from parsed CSV
-    const fileInput = document.getElementById('csvFileInput');
-    const status = document.getElementById('uploadStatus');
+    // Helper: render table from parsed CSV (upload UI removed)
     const warn = document.getElementById('warnMissing');
     const tableHead = document.getElementById('dataTableHead');
     const tableBody = document.getElementById('dataTableBody');
-    const loadExample = document.getElementById('loadExample');
-
-  const volumeCtx = document.getElementById('volumeChart');
+    const volumeCtx = document.getElementById('volumeChart');
   let volumeChart = null;
   const lossCtx = document.getElementById('lossChart');
   let lossChart = null;
@@ -217,7 +207,7 @@
 
     function handleParsed(result) {
       const { columns, rows } = result;
-      if (!columns || columns.length === 0) { status.textContent = 'No columns found in CSV'; return; }
+      if (!columns || columns.length === 0) { warn.textContent = 'No columns found in data'; return; }
       renderTable(columns, rows);
 
       const volCols = detectVolumeColumns(columns);
@@ -239,31 +229,6 @@
       buildVolumeChart(rows, volCols, labelCol);
       buildLossChart(rows, volCols, labelCol, categoryCol);
     }
-
-    fileInput.addEventListener('change', e => {
-      const f = e.target.files && e.target.files[0];
-      if (!f) return;
-      status.textContent = `Reading ${f.name}...`;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        try {
-          const txt = ev.target.result;
-          const parsed = window.parseCSV(txt);
-          handleParsed(parsed);
-          status.textContent = `Loaded ${f.name} — ${parsed.rows.length} rows`;
-        } catch (err) {
-          status.textContent = 'Error parsing CSV: ' + err.message;
-        }
-      };
-      reader.readAsText(f);
-    });
-
-    loadExample.addEventListener('click', () => {
-      const example = `Item,SKU,vol_start,vol_press,vol_glaze,vol_kiln_out\nExample A,MAT-A-001,100,95,90,88\nExample B,MAT-B-002,120,118,115,110`;
-      const parsed = window.parseCSV(example);
-      handleParsed(parsed);
-      status.textContent = 'Loaded example CSV';
-    });
   </script>
 </body>
 </html>
