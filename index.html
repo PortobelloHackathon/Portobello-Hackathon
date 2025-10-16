@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Portobello Dashboard</title>
 
   <!-- Inter font -->
@@ -15,11 +15,14 @@
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+          fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
           colors: {
-            pbBlue: '#0B1F52',     // brand dark blue
-            pbSlate: '#6B7280'     // slate-ish gray
-          },
+            pbBlue: '#0B1F52',       // brand dark blue
+            pbSlate: '#6B7280',      // (kept in case you use it)
+            pbGrayLight: '#CFD3DA',  // brand light gray
+            pbGrayMid:   '#7C8390',  // brand mid gray
+            pbGrayDark:  '#434A52'   // brand dark gray
+          }
         }
       }
     }
@@ -28,202 +31,182 @@
 
 <body class="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
   <!-- HEADER: gray (left) -> dark blue (right), title in brand blue -->
-<header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
-  <div class="mx-auto max-w-7xl px-6 py-5">
-    <div class="flex items-baseline gap-2">
-      <h1 class="text-4xl font-extrabold tracking-tight text-pbBlue">Portobello</h1>
-      <span class="text-xl font-semibold text-pbBlue">America</span>
+  <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
+    <div class="mx-auto max-w-7xl px-6 py-5">
+      <div class="flex items-baseline gap-2">
+        <h1 class="text-4xl font-extrabold tracking-tight text-pbBlue">Portobello</h1>
+        <span class="text-xl font-semibold text-pbBlue">America</span>
+      </div>
     </div>
-  </div>
-</header>
+  </header>
 
   <div class="flex flex-1 overflow-hidden">
-    <!-- SIDEBAR: rounded, touching tabs -->
+    <!-- SIDEBAR -->
     <aside class="w-48 bg-slate-50 border-r shadow-lg">
-  <nav class="mt-6 flex flex-col">
-    <a href="#"
-       class="flex items-center px-5 py-3 bg-[#0b1f52] text-white font-semibold rounded-r-full mb-2 shadow-sm">
-      <span>Analytics</span>
-    </a>
-    <a href="#"
-       class="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-200 rounded-r-full mb-2 transition">
-      <span>Inventory</span>
-    </a>
-  </nav>
-</aside>
+      <nav class="mt-6 flex flex-col" aria-label="Primary">
+        <a href="#" class="flex items-center px-5 py-3 bg-[#0b1f52] text-white font-semibold rounded-r-full mb-2 shadow-sm">
+          <span>Analytics</span>
+        </a>
+        <a href="#" class="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-200 rounded-r-full mb-2 transition">
+          <span>Inventory</span>
+        </a>
+      </nav>
+    </aside>
 
     <!-- MAIN -->
     <main class="flex-1 overflow-auto">
       <div class="mx-auto max-w-7xl px-8 py-8">
-  <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Analytics</h2>
+        <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Analytics</h2>
 
-  <!-- DASHBOARD GRID -->
-  <div class="mt-6 grid grid-cols-12 gap-6">
-    <!-- Left column: Line chart (takes ~2/3 width on desktop) -->
-    <section class="col-span-12 lg:col-span-8 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-      <div class="flex items-center justify-between mb-2">
-        <h3 class="text-lg font-semibold text-slate-800">Material Loss — Last 24h</h3>
-        <span class="text-sm text-slate-500">kg</span>
-      </div>
-      <canvas id="lossLineChart" class="w-full h-64"></canvas>
-    </section>
+        <!-- DASHBOARD GRID -->
+        <div class="mt-6 grid grid-cols-12 gap-4">
+          <!-- Left: Line chart -->
+          <section class="col-span-12 lg:col-span-8 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[22rem]">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-lg font-semibold text-slate-800">Material Loss — Last 24h</h3>
+              <span class="text-sm text-slate-500">kg</span>
+            </div>
+            <canvas id="lossLineChart" class="w-full h-full"></canvas>
+          </section>
 
-    <!-- Right column: KPI donuts (stack 3) -->
-    <section class="col-span-12 lg:col-span-4 grid grid-cols-1 gap-6">
-      <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-        <h3 class="text-sm font-medium text-slate-600 mb-2">Yield</h3>
-        <div class="flex items-center gap-4">
-          <canvas id="kpiDonut1" class="h-28 w-28"></canvas>
-          <div class="text-slate-600 text-sm">Good parts / total</div>
+          <!-- Right: KPI donuts -->
+          <section class="col-span-12 lg:col-span-4 grid grid-cols-1 gap-4">
+            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+              <h3 class="text-sm font-medium text-slate-600 mb-2">Yield</h3>
+              <div class="flex items-center gap-4">
+                <canvas id="kpiDonut1" class="h-24 w-24"></canvas>
+                <div class="text-slate-600 text-sm">Good parts / total</div>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+              <h3 class="text-sm font-medium text-slate-600 mb-2">Scrap Rate</h3>
+              <div class="flex items-center gap-4">
+                <canvas id="kpiDonut2" class="h-24 w-24"></canvas>
+                <div class="text-slate-600 text-sm">Scrap / input</div>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+              <h3 class="text-sm font-medium text-slate-600 mb-2">On-Time</h3>
+              <div class="flex items-center gap-4">
+                <canvas id="kpiDonut3" class="h-24 w-24"></canvas>
+                <div class="text-slate-600 text-sm">Orders on schedule</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Multi-ring donut -->
+          <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[18rem]">
+            <h3 class="text-lg font-semibold text-slate-800 mb-2">Loss Breakdown by Step</h3>
+            <canvas id="multiRingDonut" class="w-full h-full"></canvas>
+          </section>
         </div>
       </div>
-      <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-        <h3 class="text-sm font-medium text-slate-600 mb-2">Scrap Rate</h3>
-        <div class="flex items-center gap-4">
-          <canvas id="kpiDonut2" class="h-28 w-28"></canvas>
-          <div class="text-slate-600 text-sm">Scrap / input</div>
-        </div>
-      </div>
-      <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-        <h3 class="text-sm font-medium text-slate-600 mb-2">On-Time</h3>
-        <div class="flex items-center gap-4">
-          <canvas id="kpiDonut3" class="h-28 w-28"></canvas>
-          <div class="text-slate-600 text-sm">Orders on schedule</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Optional: a multi-ring donut like your second image -->
-    <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-      <h3 class="text-lg font-semibold text-slate-800 mb-2">Loss Breakdown by Step</h3>
-      <canvas id="multiRingDonut" class="w-full h-64"></canvas>
-    </section>
-  </div>
-</div>
     </main>
   </div>
-</body>
-</html>
 
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
-      colors: {
-        pbBlue:    '#0B1F52', // brand blue
-        pbGrayLight:'#CFD3DA',
-        pbGrayMid:  '#7C8390',
-        pbGrayDark: '#434A52',
-      },
-    },
-  },
-}
-</script>
+  <!-- Chart.js (single include) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-<script>
-  // Brand colors from your palette
-  const PB_BLUE = '#0B1F52';
-  const PB_GRAY_D = '#434A52';
-  const PB_GRAY_M = '#7C8390';
-  const PB_GRAY_L = '#CFD3DA';
+  <script>
+    // ---- Brand colors ----
+    const PB_BLUE   = '#0B1F52';
+    const PB_GRAY_D = '#434A52';
+    const PB_GRAY_M = '#7C8390';
+    const PB_GRAY_L = '#CFD3DA';
 
-  // Global defaults to match your UI
-  Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-  Chart.defaults.color = PB_GRAY_D;
-  Chart.defaults.plugins.legend.display = false;
+    // ---- Chart.js defaults ----
+    Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+    Chart.defaults.color = PB_GRAY_D;
+    Chart.defaults.plugins.legend.display = false;
 
-  // --- Line chart with dots (example data; replace with real) ---
-  const lineCtx = document.getElementById('lossLineChart');
-  new Chart(lineCtx, {
-    type: 'line',
-    data: {
-      labels: ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00'],
-      datasets: [{
-        label: 'Loss (kg)',
-        data: [12, 9, 11, 15, 13, 18, 16, 14],
-        borderColor: PB_BLUE,
-        backgroundColor: PB_BLUE + '22',
-        pointBackgroundColor: PB_BLUE,
-        pointRadius: 4,
-        tension: 0.3, // slight curve
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        x: { grid: { display: false } },
-        y: { grid: { color: PB_GRAY_L }, ticks: { beginAtZero: true } }
-      }
-    }
-  });
+    // Canvases
+    const lineCtx = document.getElementById('lossLineChart');
+    const kpi1Ctx = document.getElementById('kpiDonut1');
+    const kpi2Ctx = document.getElementById('kpiDonut2');
+    const kpi3Ctx = document.getElementById('kpiDonut3');
+    const multiCtx = document.getElementById('multiRingDonut');
 
-  // Helper to build a single donut KPI
-  function kpiDonut(elId, pct, color = PB_BLUE) {
-    const ctx = document.getElementById(elId);
-    return new Chart(ctx, {
-      type: 'doughnut',
+    // Line chart
+    const lossLineChart = new Chart(lineCtx, {
+      type: 'line',
       data: {
-        labels: ['Complete','Remaining'],
+        labels: [],
         datasets: [{
-          data: [pct, 100 - pct],
-          backgroundColor: [color, PB_GRAY_L],
-          borderWidth: 0,
-          cutout: '70%'
+          label: 'Loss (kg)',
+          data: [],
+          borderColor: PB_BLUE,
+          backgroundColor: PB_BLUE + '22',
+          pointBackgroundColor: PB_BLUE,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.3,
+          fill: true
         }]
       },
       options: {
-        plugins: {
-          tooltip: { enabled: false },
-          legend: { display: false },
-          // Center label
-          datalabels: false
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { grid: { display: false } },
+          y: { grid: { color: PB_GRAY_L } }
         }
       }
     });
-  }
 
-  // Donut KPIs (example percentages)
-  kpiDonut('kpiDonut1', 86);            // Yield
-  kpiDonut('kpiDonut2', 14, PB_GRAY_M); // Scrap
-  kpiDonut('kpiDonut3', 92);            // On-time
-
-  // --- Multi-ring donut (like your second image) ---
-  // Achieved by multiple datasets in one doughnut
-  const multiRing = document.getElementById('multiRingDonut');
-  new Chart(multiRing, {
-    type: 'doughnut',
-    data: {
-      labels: ['Cutting','Assembly','QC','Packaging'],
-      datasets: [
-        { // inner ring
-          data: [90, 10, 0, 0],
-          backgroundColor: [PB_BLUE, PB_GRAY_L, PB_GRAY_L, PB_GRAY_L],
-          borderWidth: 0,
-          cutout: '60%'
+    // Donut helper
+    function makeDonut(ctx, pct, color = PB_BLUE) {
+      return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Complete','Remaining'],
+          datasets: [{
+            data: [pct, 100 - pct],
+            backgroundColor: [color, PB_GRAY_L],
+            borderWidth: 0,
+            cutout: '70%'
+          }]
         },
-        { // middle ring
-          data: [0, 80, 20, 0],
-          backgroundColor: [PB_GRAY_L, PB_BLUE, PB_GRAY_L, PB_GRAY_L],
-          borderWidth: 0,
-          cutout: '75%'
-        },
-        { // outer ring
-          data: [0, 0, 70, 30],
-          backgroundColor: [PB_GRAY_L, PB_GRAY_L, PB_BLUE, PB_GRAY_M],
-          borderWidth: 0,
-          cutout: '85%'
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: true } }
+        options: { plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+      });
     }
-  });
-</script>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    const kpiYield  = makeDonut(kpi1Ctx, 0);
+    const kpiScrap  = makeDonut(kpi2Ctx, 0, PB_GRAY_M);
+    const kpiOnTime = makeDonut(kpi3Ctx, 0);
+
+    // Multi-ring donut example
+    const multi = new Chart(multiCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Cutting','Assembly','QC','Packaging'],
+        datasets: [
+          { data: [90,10,0,0], backgroundColor: [PB_BLUE, PB_GRAY_L, PB_GRAY_L, PB_GRAY_L], borderWidth: 0, cutout: '60%' },
+          { data: [0,80,20,0], backgroundColor: [PB_GRAY_L, PB_BLUE, PB_GRAY_L, PB_GRAY_L], borderWidth: 0, cutout: '75%' },
+          { data: [0,0,70,30], backgroundColor: [PB_GRAY_L, PB_GRAY_L, PB_BLUE, PB_GRAY_M], borderWidth: 0, cutout: '85%' }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
+    });
+
+    // Single entry point to update charts
+    function updateDashboard(data) {
+      lossLineChart.data.labels = data.times || [];
+      lossLineChart.data.datasets[0].data = data.lossKg || [];
+      lossLineChart.update();
+
+      kpiYield.data.datasets[0].data = [data.kpis.yieldPct, 100 - data.kpis.yieldPct]; kpiYield.update();
+      kpiScrap.data.datasets[0].data = [data.kpis.scrapPct, 100 - data.kpis.scrapPct]; kpiScrap.update();
+      kpiOnTime.data.datasets[0].data = [data.kpis.onTimePct, 100 - data.kpis.onTimePct]; kpiOnTime.update();
+    }
+
+    // Demo data
+    updateDashboard({
+      times:  ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00'],
+      lossKg: [12, 9, 11, 15, 13, 18, 16, 14],
+      kpis:   { yieldPct: 86, scrapPct: 14, onTimePct: 92 }
+    });
+
+    // Later: updateDashboard(realData)
+  </script>
+</body>
+</html>
