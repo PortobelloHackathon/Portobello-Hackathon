@@ -18,10 +18,10 @@
           fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
           colors: {
             pbBlue: '#0B1F52',       // brand dark blue
-            pbSlate: '#6B7280',      // (kept in case you use it)
-            pbGrayLight: '#CFD3DA',  // brand light gray
-            pbGrayMid:   '#7C8390',  // brand mid gray
-            pbGrayDark:  '#434A52'   // brand dark gray
+            pbSlate: '#6B7280',
+            pbGrayLight: '#CFD3DA',
+            pbGrayMid:   '#7C8390',
+            pbGrayDark:  '#434A52'
           }
         }
       }
@@ -30,7 +30,7 @@
 </head>
 
 <body class="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
-  <!-- HEADER: gray (left) -> dark blue (right), title in brand blue -->
+  <!-- HEADER -->
   <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
     <div class="mx-auto max-w-7xl px-6 py-5">
       <div class="flex items-baseline gap-2">
@@ -58,18 +58,18 @@
       <div class="mx-auto max-w-7xl px-8 py-8">
         <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Analytics</h2>
 
-        <!-- DASHBOARD GRID -->
+        <!-- GRID -->
         <div class="mt-6 grid grid-cols-12 gap-4">
-          <!-- Left: Line chart -->
+          <!-- Line chart -->
           <section class="col-span-12 lg:col-span-8 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[22rem]">
             <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-slate-800">Material Loss — Last 24h</h3>
+              <h3 class="text-lg font-semibold text-slate-800">Material Loss Per Stage</h3>
               <span class="text-sm text-slate-500">kg</span>
             </div>
             <canvas id="lossLineChart" class="w-full h-full"></canvas>
           </section>
 
-          <!-- Right: KPI donuts (smaller, fixed-size) -->
+          <!-- KPI donuts -->
           <section class="col-span-12 lg:col-span-4 grid grid-cols-1 gap-3">
             <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-3">
               <h3 class="text-sm font-medium text-slate-600 mb-1">Yield</h3>
@@ -102,33 +102,31 @@
             </div>
           </section>
 
-          <!-- Loss Breakdown (bottom card) -->
-<section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-3 md:p-4 h-[16rem] overflow-hidden">
-  <h3 class="text-lg font-semibold text-slate-800 mb-2">Loss Breakdown by Step</h3>
+          <!-- Loss Breakdown -->
+          <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-3 md:p-4 h-[16rem] overflow-hidden">
+            <h3 class="text-lg font-semibold text-slate-800 mb-2">Loss Breakdown by Step</h3>
 
-  <div class="flex items-center justify-center gap-4 md:gap-6">
-    <!-- Vertical legend (tighter) -->
-    <ul class="space-y-1.5 text-sm text-slate-700">
-      <li class="flex items-center">
-        <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#1F77B4"></span> Cutting
-      </li>
-      <li class="flex items-center">
-        <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#FF7F0E"></span> Assembly
-      </li>
-      <li class="flex items-center">
-        <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#2CA02C"></span> QC
-      </li>
-      <li class="flex items-center">
-        <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#9467BD"></span> Packaging
-      </li>
-    </ul>
+            <div class="flex items-center justify-center gap-6 md:gap-10">
+              <ul class="space-y-1.5 text-sm text-slate-700">
+                <li class="flex items-center">
+                  <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#1F77B4"></span> Cutting
+                </li>
+                <li class="flex items-center">
+                  <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#FF7F0E"></span> Assembly
+                </li>
+                <li class="flex items-center">
+                  <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#2CA02C"></span> QC
+                </li>
+                <li class="flex items-center">
+                  <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#9467BD"></span> Packaging
+                </li>
+              </ul>
 
-    <!-- Smaller donut box -->
-    <div class="w-[200px] h-[200px]">
-      <canvas id="multiRingDonut" class="!w-full !h-full"></canvas>
-    </div>
-  </div>
-</section>
+              <div class="w-[190px] h-[190px]">
+                <canvas id="multiRingDonut" class="!w-full !h-full"></canvas>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </main>
@@ -146,6 +144,9 @@
     const STATUS_GREEN  = '#2BAF6A'; // past
     const STATUS_YELLOW = '#F4B000'; // current
 
+    // Stage labels for x-axis
+    const STAGE_LABELS = ['Start', 'Press', 'Glaze', 'Kiln', 'Sort'];
+
     // ---- Chart.js defaults ----
     Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
     Chart.defaults.color = PB_GRAY_D;
@@ -158,30 +159,25 @@
     const kpi3Ctx  = document.getElementById('kpiDonut3');
     const multiCtx = document.getElementById('multiRingDonut');
 
-    // ----- Line chart with status-colored segments & points -----
-    // statuses array is set in updateDashboard()
-    let statuses = [];
+    // ----- Line chart with stage x-axis + status colors -----
+    let statuses = []; // ['past','current','future',...] length 5
 
     function colorFor(idx) {
       const s = statuses[idx];
       if (s === 'past')    return STATUS_GREEN;
       if (s === 'current') return STATUS_YELLOW;
-      return PB_BLUE; // future/default
+      return PB_BLUE;
     }
 
     const lossLineChart = new Chart(lineCtx, {
       type: 'line',
       data: {
-        labels: [],
+        labels: STAGE_LABELS,  // <-- fixed to stages
         datasets: [{
           label: 'Loss (kg)',
           data: [],
-          // line & fill
-          segment: {
-            borderColor: (ctx) => colorFor(ctx.p0DataIndex),
-          },
+          segment: { borderColor: (ctx) => colorFor(ctx.p0DataIndex) },
           backgroundColor: PB_GRAY_L + '55', // subtle constant fill
-          // points
           pointBackgroundColor: (ctx) => colorFor(ctx.dataIndex),
           pointRadius: 4,
           pointHoverRadius: 6,
@@ -193,8 +189,25 @@
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-          x: { grid: { display: false } },
+          x: {
+            grid: { display: false },
+            ticks: {
+              maxRotation: 0,
+              callback: (val, idx) => `${idx + 1}. ${STAGE_LABELS[idx]}`
+            }
+          },
           y: { grid: { color: PB_GRAY_L } }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: (items) => {
+                const i = items[0].dataIndex;
+                return `Stage ${i + 1} — ${STAGE_LABELS[i]}`;
+              }
+            }
+          }
         }
       }
     });
@@ -220,79 +233,35 @@
       });
     }
 
-    const kpiYield  = makeDonut(kpi1Ctx, 0, '#0B1F52');  // or STATUS_GREEN if you want
-const kpiScrap  = makeDonut(kpi2Ctx, 0, '#94A0B8');  // QC-ish gray-blue
-const kpiOnTime = makeDonut(kpi3Ctx, 0, '#2BAF6A'); 
- // green like “past” status
+    // KPI donuts (fixed hex for scrap color)
+    const kpiYield  = makeDonut(kpi1Ctx, 0, '#0B1F52');
+    const kpiScrap  = makeDonut(kpi2Ctx, 0, '#94A3B8'); // fixed hex
+    const kpiOnTime = makeDonut(kpi3Ctx, 0, '#2BAF6A');
 
-    const COLOR_CUT = '#0B1F52'; // Cutting (brand blue)
-const COLOR_ASM = '#475569'; // Assembly (slate-600)
-const COLOR_QC  = '#94A3B8'; // QC (slate-400)
-const COLOR_PKG = '#CBD5E1'; // Packaging (slate-300)
+    // ----- Multi-ring donut with equal ring widths -----
+    const CUT = '#1F77B4', ASM = '#FF7F0E', QC = '#2CA02C', PKG = '#9467BD', BG = '#EEF2F6';
+    const THICK = 10;
+    const band = (innerPct) => ({ cutout: `${innerPct}%`, radius: `${innerPct + THICK}%` });
+    const b1 = band(70), b2 = band(80), b3 = band(90);
 
-// Distinct categorical colors (common in charts)
-const CUT = '#1F77B4'; // blue
-const ASM = '#FF7F0E'; // orange
-const QC  = '#2CA02C'; // green
-const PKG = '#9467BD'; // purple
-const BG  = '#EEF2F6'; // neutral filler for “other” segments
-
-
-// Helper to build equal-width rings (percent strings)
-const THICK = 10;   // each ring width ≈ 10% of radius
-function band(innerPct) {
-  // innerPct is 0-100; returns {cutout, radius} as percent strings
-  return { cutout: `${innerPct}%`, radius: `${innerPct + THICK}%` };
-}
-
-const b1 = band(70); // inner ring: 70–80%
-const b2 = band(80); // middle:     80–90%
-const b3 = band(90); // outer:      90–100% (we’ll pull it in a bit)
-
-new Chart(multiCtx, {
-  type: 'doughnut',
-  data: {
-    labels: ['Cutting','Assembly','QC','Packaging'],
-    datasets: [
-      { // inner = Cutting
-        data: [90,10,0,0],
-        backgroundColor: [CUT, BG, BG, BG],
-        borderColor: '#fff', borderWidth: 0,
-        cutout: b1.cutout, radius: b1.radius
+    new Chart(multiCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Cutting','Assembly','QC','Packaging'],
+        datasets: [
+          { data: [90,10,0,0], backgroundColor: [CUT, BG, BG, BG], borderColor: '#fff', borderWidth: 0, cutout: b1.cutout, radius: b1.radius },
+          { data: [0,80,20,0], backgroundColor: [BG, ASM, BG, BG], borderColor: '#fff', borderWidth: 0, cutout: b2.cutout, radius: b2.radius },
+          { data: [0,0,70,30], backgroundColor: [BG, BG, QC, PKG], borderColor: '#fff', borderWidth: 0, cutout: b3.cutout, radius: '98%' }
+        ]
       },
-      { // middle = Assembly
-        data: [0,80,20,0],
-        backgroundColor: [BG, ASM, BG, BG],
-        borderColor: '#fff', borderWidth: 0,
-        cutout: b2.cutout, radius: b2.radius
-      },
-      { // outer = QC + Packaging
-        data: [0,0,70,30],
-        backgroundColor: [BG, BG, QC, PKG],
-        borderColor: '#fff', borderWidth: 0,
-        // pull in slightly so it never touches the card edge
-        cutout: b3.cutout, radius: '98%'
-      }
-    ]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    rotation: -90 * (Math.PI/180),
-    plugins: { legend: { display: false }, tooltip: { enabled: false } }
-  }
-});
+      options: { responsive: true, maintainAspectRatio: false, rotation: -90 * (Math.PI/180), plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+    });
 
-    // ----- Single entry point to update charts -----
-    // data = {
-    //   times: [...],
-    //   lossKg: [...],
-    //   statuses: ['past'|'current'|'future', ...],
-    //   kpis: { yieldPct, scrapPct, onTimePct }
-    // }
+    // ----- Update entry point -----
+    // data = { lossKg:[...5], statuses:[...5], kpis:{yieldPct,scrapPct,onTimePct} }
     function updateDashboard(data) {
       statuses = data.statuses || [];
-      lossLineChart.data.labels = data.times || [];
+      lossLineChart.data.labels = STAGE_LABELS;       // fixed to stages
       lossLineChart.data.datasets[0].data = data.lossKg || [];
       lossLineChart.update();
 
@@ -301,12 +270,11 @@ new Chart(multiCtx, {
       kpiOnTime.data.datasets[0].data = [data.kpis.onTimePct, 100 - data.kpis.onTimePct]; kpiOnTime.update();
     }
 
-    // ---- Demo data to show the status colors immediately ----
+    // ---- Demo (5 stages) ----
     updateDashboard({
-      times:  ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00'],
-      lossKg: [12, 9, 11, 15, 13, 18, 16, 14],
-      statuses: ['past','past','past','current','future','future','future','future'],
-      kpis:   { yieldPct: 86, scrapPct: 14, onTimePct: 92 }
+      lossKg:   [12, 15, 13, 18, 14],                       // Start→Press→Glaze→Kiln→Sort
+      statuses: ['past','past','current','future','future'],
+      kpis:     { yieldPct: 86, scrapPct: 14, onTimePct: 92 }
     });
   </script>
 </body>
