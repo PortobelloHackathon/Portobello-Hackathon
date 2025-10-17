@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analytics — Portobello Dashboard</title>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
+          colors: {
+            pbBlue: '#0B1F52',
+            pbSlate: '#6B7280',
+            pbGrayLight: '#CFD3DA',
+            pbGrayMid:   '#7C8390',
+            pbGrayDark:  '#434A52',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js (single include) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body class="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
+    <div class="relative w-full py-5 pl-3 flex items-center">
+      <a href="/" class="shrink-0">
+        <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-16 w-auto object-contain block" />
+      </a>
+      <h1 class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none">
+        Tile Material Dashboard
+      </h1>
+      <div class="ml-auto"></div>
+    </div>
+  </header>
+  
+  <div class="flex flex-1 overflow-hidden">
+    <script src="sidebar.js" defer></script>
+
+    <!-- MAIN -->
+    <main class="flex-1 overflow-auto">
+      <div class="mx-auto max-w-7xl px-6 md:px-8 py-8">
+        <!-- Top heading / status -->
+        <div class="flex items-center justify-between">
+          <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Analytics</h2>
+          <div id="dataStatus" class="text-sm text-slate-500">loading…</div>
+        </div>
+
+        <!-- Toolbar row: Recipe filter + Scrub + Timestamp + Controls -->
+        <section class="mt-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-600">Recipe:</span>
+              <select id="recipeFilter" class="border rounded px-2 py-1 bg-white min-w-[7rem]">
+                <option value="__all__" selected>All</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2 ml-2">
+              <span class="text-sm text-slate-600">Scrub</span>
+              <input id="scrub" type="range" min="0" max="0" step="1" value="0" class="w-56 md:w-96 accent-pbBlue"/>
+            </div>
+
+            <!-- Big timestamp -->
+            <div id="tsLabel" class="text-2xl md:text-3xl font-semibold text-slate-900 bg-slate-100 px-3 py-1 rounded">
+              —
+            </div>
+
+            <div class="ml-auto flex items-center gap-2">
+              <button id="btnPlay" class="px-3 py-1.5 rounded border">▶ Play</button>
+              <button id="chooseAnalyticsTs" class="px-3 py-1.5 rounded border">Choose timestamp…</button>
+              <a href="batch-compare.html" id="btnCompare" class="px-3 py-1.5 rounded border">Compare</a>
+              <button id="zoomOut"   class="px-3 py-1.5 rounded border">−</button>
+              <button id="zoomIn"    class="px-3 py-1.5 rounded border">+</button>
+              <button id="zoomReset" class="px-3 py-1.5 rounded border">Reset Zoom</button>
+              <button id="btnDownload" class="px-3 py-1.5 rounded border">Download PNG</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- GRID -->
+        <div class="mt-4 grid grid-cols-12 gap-4">
+          <!-- Line chart -->
+          <section class="col-span-12 xl:col-span-8 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[24rem]">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-lg font-semibold text-slate-800">Material Flow per Stage</h3>
+              <span class="text-xs text-slate-500">units: ft²</span>
+            </div>
+            <canvas id="lossLineChart" class="w-full h-full"></canvas>
+          </section>
+
+          <!-- Stage summaries + final yield -->
+          <section class="col-span-12 xl:col-span-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-lg font-semibold text-slate-800">Snapshot</h3>
+              <span id="dashLoading" class="text-xs text-slate-500">loading…</span>
+            </div>
+
+            <!-- Final yield -->
+            <div class="rounded-xl border bg-gradient-to-br from-slate-50 to-white p-4 mb-4">
+              <div class="text-sm text-slate-500">Final Yield</div>
+              <div class="flex items-end gap-3">
+                <div id="yieldDelta" class="text-sm font-medium text-slate-600">—</div>
+                <div id="yieldPct" class="ml-auto text-3xl font-semibold text-slate-900">—</div>
+              </div>
+            </div>
+
+            <!-- Stage cards -->
+            <div id="stageList" class="grid grid-cols-1 gap-2">
+              <!-- Filled by JS:
+                Card layout:
+                <div class="flex justify-between items-baseline rounded-lg border p-3">
+                  <div>
+                    <div class="text-sm text-slate-500">Start</div>
+                    <div class="text-xl font-semibold">62,100</div>
+                  </div>
+                  <div class="text-sm text-slate-600">100% baseline</div>
+                </div>
+              -->
+            </div>
+          </section>
+
+          <!-- Loss Breakdown -->
+          <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-3 md:p-4 h-[20rem] overflow-hidden">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-slate-800 mb-2">Loss Breakdown by Step</h3>
+            </div>
+
+            <div class="flex items-center justify-center gap-6 md:gap-10">
+              <div id="stageLegend" class="space-y-1.5 text-sm text-slate-700">
+                <div class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#1F77B4"></span> Start</div>
+                <div class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#FF7F0E"></span> Press</div>
+                <div class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#2CA02C"></span> Glaze</div>
+                <div class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#9467BD"></span> Kiln</div>
+                <div class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#D62728"></span> Sort</div>
+              </div>
+
+              <div id="multiRingPercent" class="mt-2 text-sm text-slate-600"></div>
+
+              <div class="w-[210px] h-[210px]">
+                <canvas id="multiRingDonut" class="!w-full !h-full"></canvas>
+              </div>
+              <div class="ml-6 w-60">
+                <canvas id="stepPctChart" class="!w-full h-44"></canvas>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Timestamp modal -->
+  <div id="analyticsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40">
+    <div class="bg-white rounded p-4 w-96">
+      <h3 class="font-semibold mb-2">Select timestamp for analytics</h3>
+      <select id="analyticsSelect" class="w-full border p-2 mb-3"></select>
+      <div class="flex justify-end gap-2">
+        <button id="analyticsCancel" class="px-3 py-1 rounded border">Cancel</button>
+        <button id="analyticsView" class="px-3 py-1 bg-slate-700 text-white rounded">View</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // ---- Colors & labels ----
+    const PB_GRAY_D = '#434A52';
+    const PB_GRAY_L = '#CFD3DA';
+    const STAGE_LABELS = ['Start','Press','Glaze','Kiln','Sort'];
+    const STAGE_COLORS = ['#1F77B4','#FF7F0E','#2CA02C','#9467BD','#D62728'];
+
+    // Chart defaults
+    Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+    Chart.defaults.color = PB_GRAY_D;
+    Chart.defaults.plugins.legend.display = false;
+
+    // DOM
+    const dataStatus = document.getElementById('dataStatus');
+    const recipeFilter = document.getElementById('recipeFilter');
+    const scrub   = document.getElementById('scrub');
+    const tsLabel = document.getElementById('tsLabel');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnDownload = document.getElementById('btnDownload');
+    const zoomInBtn = document.getElementById('zoomIn');
+    const zoomOutBtn = document.getElementById('zoomOut');
+    const zoomResetBtn = document.getElementById('zoomReset');
+    const dashLoading = document.getElementById('dashLoading');
+
+    const chooseBtn = document.getElementById('chooseAnalyticsTs');
+    const modalEl   = document.getElementById('analyticsModal');
+    const selectEl  = document.getElementById('analyticsSelect');
+    const cancelBtn = document.getElementById('analyticsCancel');
+    const viewBtn   = document.getElementById('analyticsView');
+
+    const lineCtx   = document.getElementById('lossLineChart');
+    const multiCtx  = document.getElementById('multiRingDonut');
+    const stepPctCtx= document.getElementById('stepPctChart');
+
+    const stageList = document.getElementById('stageList');
+    const yieldPctEl = document.getElementById('yieldPct');
+    const yieldDeltaEl = document.getElementById('yieldDelta');
+
+    // Data
+    const DATA = { columns: [], rows: [] };
+    let ALL_TIMES = [];
+    let FILTERED_TIMES = [];
+    let currentIndex = 0;
+    let currentRow = null;
+
+    // Helpers
+    const toNum = (v) => {
+      if (v===null || v===undefined || v==='') return NaN;
+      const n = Number(String(v).replace(/,/g,''));
+      return Number.isFinite(n) ? n : NaN;
+    };
+    const fmtInt = (n) => Number.isFinite(n) ? n.toLocaleString() : '—';
+    const fmtPct = (n) => Number.isFinite(n) ? n.toFixed(2) + '%' : '—';
+
+    function parseCSV(text) {
+      const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+      const lines = clean.split('\n').filter(l => l.trim() !== '');
+      if (!lines.length) return { columns: [], rows: [] };
+      const parseLine = (line) => {
+        const out = []; let cur = ''; let inQ = false;
+        for (let i=0; i<line.length; i++) {
+          const ch = line[i];
+          if (ch === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else { inQ = !inQ; } continue; }
+          if (ch === ',' && !inQ) { out.push(cur); cur = ''; continue; }
+          cur += ch;
+        }
+        out.push(cur); return out;
+      };
+      const headers = parseLine(lines[0]).map(h => h.trim());
+      const rows = lines.slice(1).map(l => {
+        const p = parseLine(l); const o = {};
+        for (let i=0; i<headers.length; i++) o[headers[i]] = (p[i] ?? '').trim();
+        return o;
+      });
+      return { columns: headers, rows };
+    }
+
+    // Volume columns
+    const volAliases = [
+      ['vol_start'],
+      ['vol_press','vol_press_out'],
+      ['vol_glaze','vol_glaze_out'],
+      ['vol_kiln','vol_kiln_out'],
+      ['vol_sort','vol_sort_out']
+    ];
+    const pickVolumeKeys = () => volAliases.map(names => names.find(n => DATA.columns.includes(n))).filter(Boolean);
+    const getVolumes = (row) => pickVolumeKeys().map(k => toNum(row[k]));
+
+    // Chart instances
+    let zoomFactor = 1.0;
+// --- Line Chart (Fixed hover tooltips) ---
+const flowChart = new Chart(lineCtx, {
+  type: 'line',
+  data: {
+    labels: STAGE_LABELS,
+    datasets: [{
+      label: 'Volume (ft²)',
+      data: [],
+      borderColor: '#0B1F52',
+      backgroundColor: '#0B1F5233',
+      pointBackgroundColor: '#0B1F52',
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.3,
+      fill: true,
+    }],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: { grid: { display: false } },
+      y: { beginAtZero: true, grid: { color: PB_GRAY_L } },
+    },
+    plugins: {
+      tooltip: {
+        enabled: true,
+        mode: 'nearest',
+        intersect: false,
+        usePointStyle: true,
+        backgroundColor: '#0B1F52',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        callbacks: {
+          title: (items) => {
+            const i = items[0].dataIndex;
+            return `Stage ${i + 1}: ${STAGE_LABELS[i]}`;
+          },
+          label: (ctx) => {
+            const value = ctx.parsed.y;
+            return `Volume: ${Number(value).toLocaleString()} ft²`;
+          },
+afterBody: (items) => {
+  if (!currentRow) return '';
+  const i = items[0].dataIndex;
+  const n = (key, suf = '', digits = 2) => {
+    const v = toNum(currentRow[key]);
+    return Number.isFinite(v) ? `${v.toFixed(digits)}${suf}` : '—';
+  };
+  const s = (key) => currentRow[key] || '—';
+
+  let lines = [];
+
+  switch (i) {
+    case 0: // Start
+      lines.push(`Recipe ID: ${s('recipe_id')}`);
+      lines.push(`Gloss Type: ${s('gloss_type')}`);
+      lines.push(`Gloss Target: ${n('gloss_amount_target_g_per_tile', ' g/tile', 1)}`);
+      break;
+
+    case 1: // Press
+      lines.push(`Target Pressure: ${n('target_pressure', ' psi', 0)}`);
+      lines.push(`Actual Pressure: ${n('actual_pressure', ' psi', 0)}`);
+      lines.push(`Layers Tossed: ${n('layers_tossed', '', 0)}`);
+      lines.push(`Desired Thickness: ${n('desired_thickness', ' mm', 1)}`);
+      break;
+
+    case 2: // Glaze
+      lines.push(`Air Cooling: ${n('recipe_air_cooling', '', 1)}`);
+      lines.push(`Moisture: ${n('recipe_moisture', ' %', 2)}`);
+      lines.push(`Air Flow: ${n('recipe_air_flow', '', 1)}`);
+      lines.push(`Max Temp: ${n('recipe_max_temp', ' °C', 1)}`);
+      lines.push(`Humidity: ${n('recipe_humidity', ' %', 1)}`);
+      break;
+
+    case 3: // Kiln
+      lines.push(`Kiln Air Cooling: ${n('kiln_air_cooling', '', 1)}`);
+      lines.push(`Kiln Moisture: ${n('kiln_moisture', ' %', 2)}`);
+      lines.push(`Kiln Air Flow: ${n('kiln_air_flow', '', 1)}`);
+      lines.push(`Kiln Max Temp: ${n('kiln_max_temp', ' °C', 1)}`);
+      lines.push(`Kiln Humidity: ${n('kiln_humidity', ' %', 1)}`);
+      break;
+
+    case 4: // Sort
+      lines.push(`Sort Yield: ${n('vol_sort_out', ' ft²', 0)}`);
+      lines.push(`Δ Air Cooling: ${n('delta_air_cooling', '', 2)}`);
+      lines.push(`Δ Moisture: ${n('delta_moisture', '', 2)}`);
+      lines.push(`Δ Air Flow: ${n('delta_air_flow', '', 2)}`);
+      lines.push(`Δ Max Temp: ${n('delta_max_temp', ' °C', 1)}`);
+      lines.push(`Δ Humidity: ${n('delta_humidity', ' %', 1)}`);
+      break;
+  }
+
+  return lines.join('\n');
+}
+        },
+      },
+    },
+    interaction: { mode: 'nearest', intersect: false },
+    hover: { mode: 'nearest', intersect: false },
+  },
+});
+
+// --- Multi-Ring Donut (5 rings for all stages) ---
+const BG = '#EEF2F6';  // background gray
+const THICK = 9;       // ring thickness
+const rings = [55, 65, 75, 85, 95]; // inner cutouts for 5 rings
+
+const donut = new Chart(multiCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Remaining', 'Lost'],
+    datasets: rings.map((inner, idx) => ({
+      data: [100, 0],
+      backgroundColor: [STAGE_COLORS[idx], BG],
+      borderWidth: 0,
+      cutout: `${inner}%`,
+      radius: `${inner + THICK}%`
+    }))
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    rotation: -90 * (Math.PI / 180),
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) =>
+            ctx.dataIndex === 0
+              ? `Remaining: ${ctx.parsed}%`
+              : `Lost: ${ctx.parsed}%`
+        }
+      }
+    }
+  }
+});
+donut._ringVals = [0, 0, 0, 0, 0];
+
+    const bars = new Chart(stepPctCtx, {
+      type: 'bar',
+      data: { labels: STAGE_LABELS, datasets: [{ label: 'Remaining %', data: [], backgroundColor: STAGE_COLORS }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { max: 100, ticks: { callback: v => v + '%' } },
+          y: { grid: { display: false } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    // Legend hover → show per-stage loss %
+    const multiRingPercentEl = document.getElementById('multiRingPercent');
+    document.querySelectorAll('#stageLegend > div').forEach((el, idx) => {
+      el.addEventListener('mouseenter', () => {
+        const v = donut._ringVals[idx] ?? 0;
+        multiRingPercentEl.textContent = `${STAGE_LABELS[idx]} loss: ${Number(v).toFixed(1)}%`;
+      });
+      el.addEventListener('mouseleave', () => { multiRingPercentEl.textContent = ''; });
+    });
+
+    // Load data
+    fetch('tiles.csv')
+      .then(r => r.text())
+      .then(txt => {
+        Object.assign(DATA, parseCSV(txt));
+        ALL_TIMES = Array.from(new Set(DATA.rows.map(r => r.datetime))).filter(Boolean);
+        dataStatus.textContent = `${DATA.rows.length} rows loaded`;
+
+        // Recipe filter options
+        const uniqueRecipes = Array.from(new Set(DATA.rows.map(r => r.recipe_id))).filter(Boolean).sort((a,b)=>Number(a)-Number(b));
+        recipeFilter.innerHTML = '<option value="__all__">All</option>' + uniqueRecipes.map(r => `<option value="${r}">${r}</option>`).join('');
+
+        // Modal select options (all times initially)
+        selectEl.innerHTML = ALL_TIMES.map(t => {
+          const d = new Date(t.includes('Z') || t.includes('T') ? t : t.replace(' ', 'T'));
+          const label = isNaN(d)
+            ? t
+            : d.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+              }).replace(',', ', ');
+          return `<option value="${t}">${label}</option>`;
+        }).join('');
+
+        dashLoading.textContent = 'ready';
+        applyRecipeFilter(); // sets FILTERED_TIMES + kicks update
+      })
+      .catch(e => { dashLoading.textContent = 'error'; console.warn(e); });
+
+    // Build stage cards UI
+    function renderStageCards(vols, remaining) {
+      const info = [
+        { name:'Start',         i:0, suffix:'baseline' },
+        { name:'Press',         i:1, suffix:'remaining' },
+        { name:'Glaze',         i:2, suffix:'remaining' },
+        { name:'Kiln',          i:3, suffix:'remaining' },
+        { name:'Sort (Final)',  i:4, suffix:'remaining' },
+      ];
+      stageList.innerHTML = info.map(s => {
+        const v = Number(vols[s.i]);                      // absolute
+        const rpct = Number(remaining[s.i]);              // %
+        const left = `
+          <div>
+            <div class="text-sm text-slate-500">${s.name}</div>
+            <div class="text-xl font-semibold">${fmtInt(v)}</div>
+          </div>`;
+        const right = `<div class="text-sm text-slate-600">${fmtPct(rpct)} ${s.suffix}</div>`;
+        return `<div class="flex justify-between items-baseline rounded-lg border p-3">${left}${right}</div>`;
+      }).join('');
+    }
+
+    // Final yield + delta vs previous timestamp in filtered sequence
+    function renderYield(remaining) {
+      const y = remaining[4];
+      yieldPctEl.textContent = fmtPct(y);
+      // delta vs prev index (same filter)
+      const prevIdx = Math.max(0, currentIndex - 1);
+      if (FILTERED_TIMES.length < 2 || prevIdx === currentIndex) {
+        yieldDeltaEl.textContent = '—';
+        return;
+      }
+      const prevRow = rowForIndex(prevIdx);
+      const prevVols = getVolumes(prevRow);
+      const prevRem = calcRemaining(prevVols);
+      const dy = y - prevRem[4]; // percentage points
+      const arrow = dy >= 0 ? '▲' : '▼';
+      const cls = dy >= 0 ? 'text-green-600' : 'text-amber-700';
+      yieldDeltaEl.className = 'text-sm font-medium ' + cls;
+      yieldDeltaEl.textContent = `${arrow} ${Math.abs(dy).toFixed(2)} pp`;
+    }
+
+    // Compute remaining% & update all charts/cards
+    function calcRemaining(vols) {
+      const startVal = vols[0] || 0;
+      return vols.map(v => startVal > 0 ? (v / startVal) * 100 : 0).map(v => Number(v.toFixed(2)));
+    }
+
+    function setYAxisMax(values) {
+      const maxVal = Math.max(...values.filter(Number.isFinite), 0);
+      const base = maxVal * 1.05 || 100;
+      const target = base * zoomFactor;
+      const pow = Math.pow(10, Math.max(0, Math.floor(Math.log10(target)) - 1));
+      const nice = Math.ceil(target / pow) * pow;
+      flowChart.options.scales.y.max = nice;
+    }
+
+    function updateFromRow(row) {
+      currentRow = row || null;
+
+      function fmtTime(ts) {
+          if (!ts) return '—';
+          const d = new Date(ts);
+          if (isNaN(d)) return ts; // fallback if invalid
+          // Example: Oct 17 2025 9:10 AM
+          return d.toLocaleString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit', hour12: true
+          }).replace(',', ', ');
+        }
+      tsLabel.textContent = fmtTime(row?.datetime);
+
+      // volumes
+      const vols = getVolumes(row);
+      while (vols.length < 5) vols.push(0);
+
+      // line
+      flowChart.data.datasets[0].data = vols.slice(0,5);
+      setYAxisMax(vols);
+      flowChart.update();
+
+      // remaining% & lost% (for the breakdown)
+      const remaining = calcRemaining(vols);
+      const lost = remaining.map(v => Math.max(0, Math.min(100, 100 - v)));
+
+      // donut rings: all 5 stages
+      const ringVals = lost.slice(0, 5);
+      donut.data.datasets.forEach((ds, idx) => {
+        const lostPct = Number((ringVals[idx] || 0).toFixed(1));
+        const remPct  = Number((100 - lostPct).toFixed(1));
+        ds.data = [remPct, lostPct];
+      });
+      donut._ringVals = lost.map(v => Number(v.toFixed(1)));
+      donut.update();
+
+      // horizontal bars
+      bars.data.datasets[0].data = remaining.slice(0,5);
+      bars.update();
+
+      // side panel (cards + yield)
+      renderStageCards(vols, remaining);
+      renderYield(remaining);
+    }
+
+    function rowForIndex(idx) {
+      const ts = FILTERED_TIMES[idx];
+      return DATA.rows.find(r => r.datetime === ts) || null;
+    }
+
+    function updateAllByIndex(idx) {
+      const r = rowForIndex(idx);
+      updateFromRow(r);
+    }
+
+    // Filtering by recipe
+    function applyRecipeFilter() {
+      const rid = recipeFilter.value;
+      FILTERED_TIMES = (rid === '__all__'
+        ? ALL_TIMES
+        : DATA.rows.filter(r => r.recipe_id === rid).map(r => r.datetime)
+      ).filter(Boolean);
+
+      // If no rows for that recipe, fall back to All to avoid empty UI
+      if (FILTERED_TIMES.length === 0) {
+        FILTERED_TIMES = ALL_TIMES.slice();
+        recipeFilter.value = '__all__';
+      }
+
+      // Reset scrub range to filtered sequence, start at latest
+      scrub.max = Math.max(0, FILTERED_TIMES.length - 1);
+      currentIndex = Math.max(0, FILTERED_TIMES.length - 1);
+      scrub.value = currentIndex;
+
+      // Modal list also respects current filter
+      selectEl.innerHTML = FILTERED_TIMES.map(t => {
+        const parsed = new Date(t.includes('T') ? t : t.replace(' ', 'T'));
+        const formatted = isNaN(parsed)
+          ? t
+          : parsed.toLocaleString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true,
+            });
+        return `<option value="${t}">${formatted}</option>`;
+      }).join('');
+
+      updateAllByIndex(currentIndex);
+    }
+    recipeFilter.addEventListener('change', applyRecipeFilter);
+
+    // Scrub + Play/Pause
+    scrub.addEventListener('input', () => {
+      currentIndex = Number(scrub.value) || 0;
+      updateAllByIndex(currentIndex);
+    });
+
+    let playTimer = null;
+    function togglePlay() {
+      if (playTimer) {
+        clearInterval(playTimer); playTimer = null; btnPlay.textContent = '▶ Play';
+        return;
+      }
+      btnPlay.textContent = '⏸ Pause';
+      playTimer = setInterval(() => {
+        currentIndex = (currentIndex + 1) % Math.max(1, FILTERED_TIMES.length);
+        scrub.value = currentIndex;
+        updateAllByIndex(currentIndex);
+      }, 700);
+    }
+    btnPlay.addEventListener('click', togglePlay);
+
+    // Zoom
+    zoomInBtn.addEventListener('click', () => { zoomFactor = Math.max(0.25, zoomFactor * 0.8); updateAllByIndex(currentIndex); });
+    zoomOutBtn.addEventListener('click', () => { zoomFactor = Math.min(8, zoomFactor * 1.25); updateAllByIndex(currentIndex); });
+    zoomResetBtn.addEventListener('click', () => { zoomFactor = 1.0; updateAllByIndex(currentIndex); });
+
+    // Modal timestamp picker (respects filter)
+    chooseBtn.addEventListener('click', () => {
+      modalEl.classList.remove('hidden'); modalEl.classList.add('flex');
+    });
+    cancelBtn.addEventListener('click', () => {
+      modalEl.classList.add('hidden'); modalEl.classList.remove('flex');
+    });
+    viewBtn.addEventListener('click', () => {
+      const ts = selectEl.value;
+      const idx = Math.max(0, FILTERED_TIMES.indexOf(ts));
+      currentIndex = idx;
+      scrub.value = currentIndex;
+      updateAllByIndex(currentIndex);
+      modalEl.classList.add('hidden'); modalEl.classList.remove('flex');
+    });
+
+    // Download PNG of the flow chart
+    btnDownload.addEventListener('click', () => {
+      const ts = (currentRow?.datetime || 'snapshot').replace(/[: ]/g,'_');
+      const rid = (currentRow?.recipe_id || 'All');
+      const link = document.createElement('a');
+      link.href = flowChart.toBase64Image('image/png', 1.0);
+      link.download = `analytics_flow_${ts}_recipe-${rid}.png`;
+      link.click();
+    });
+
+  });
+  </script>
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Portobello Dashboard — Info & How-To</title>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
+          colors: {
+            pbBlue: '#0B1F52',
+            pbGrayLight: '#CFD3DA',
+            pbGrayMid:   '#7C8390',
+            pbGrayDark:  '#434A52',
+            pbGreen: '#16A34A',
+            pbAmber: '#F4B000'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
+    <div class="relative w-full py-5 pl-3 flex items-center">
+      <a href="/" class="shrink-0">
+        <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-16 w-auto object-contain block" />
+      </a>
+      <h1 class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none">
+        Tile Material Dashboard
+      </h1>
+      <div class="ml-auto"></div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <script src="sidebar.js" defer></script>
+
+    <!-- MAIN -->
+    <main class="flex-1 overflow-auto">
+      <div class="mx-auto max-w-7xl px-6 md:px-8 py-8">
+        <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Info & How-To</h2>
+
+        <section class="mt-5 grid grid-cols-12 gap-6">
+          <!-- TOC -->
+          <aside class="col-span-12 lg:col-span-3">
+            <nav class="sticky top-6 rounded-xl border bg-white p-4 shadow-sm text-sm">
+              <h3 class="text-base font-semibold mb-2">On this page</h3>
+              <ol class="space-y-2 list-decimal list-inside text-slate-700">
+                <li><a class="hover:text-pbBlue" href="#overview">Overview</a></li>
+                <li><a class="hover:text-pbBlue" href="#process">Process Stages</a></li>
+                <li><a class="hover:text-pbBlue" href="#pages">Pages in the Dashboard</a></li>
+                <li><a class="hover:text-pbBlue" href="#charts">How to Read the Charts</a></li>
+                <li><a class="hover:text-pbBlue" href="#data">Data Columns & Units</a></li>
+                <li><a class="hover:text-pbBlue" href="#faq">FAQ & Tips</a></li>
+              </ol>
+            </nav>
+          </aside>
+
+          <!-- CONTENT -->
+          <div class="col-span-12 lg:col-span-9 space-y-8">
+
+            <!-- Overview -->
+            <section id="overview" class="rounded-2xl border bg-white p-6 shadow-sm">
+              <h3 class="text-xl font-semibold mb-2">Overview</h3>
+              <p class="text-slate-700">
+                This dashboard helps you understand material flow and yield across production:
+                <span class="font-medium">Start → Press → Glaze → Kiln → Sort (Final)</span>.
+                You can browse historical analytics, compare batches, edit recipe setpoints, and generate predictions for in-flight batches.
+              </p>
+              <div class="mt-4 grid sm:grid-cols-2 gap-4">
+                <div class="rounded-lg border p-4">
+                  <div class="text-xs uppercase tracking-wide text-slate-500">Key Idea</div>
+                  <div class="mt-1 text-slate-800">
+                    At each stage, we track the <span class="font-semibold">remaining volume</span> and the
+                    <span class="font-semibold">loss vs. Start</span>. “Final Yield” is <code>Sort ÷ Start</code>.
+                  </div>
+                </div>
+                <div class="rounded-lg border p-4">
+                  <div class="text-xs uppercase tracking-wide text-slate-500">Predictions</div>
+                  <div class="mt-1 text-slate-800">
+                    We combine actuals (green) with model predictions (yellow). Add actuals to “lock” a stage; provide inputs to unlock model predictions downstream.
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Stages -->
+            <section id="process" class="rounded-2xl border bg-white p-6 shadow-sm">
+              <h3 class="text-xl font-semibold mb-4">Process Stages (for newcomers)</h3>
+
+              <div class="space-y-6">
+                <div>
+                  <h4 class="font-semibold text-lg">1) Start</h4>
+                  <p class="text-slate-700">
+                    The initial input volume of tiles (e.g., ft² or pieces) entering the process. This is the baseline (100%).
+                  </p>
+                  <ul class="mt-2 list-disc list-inside text-slate-700 text-sm">
+                    <li><span class="font-medium">Column(s):</span> <code>vol_start</code></li>
+                    <li><span class="font-medium">Why it matters:</span> All downstream percentages are relative to Start.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 class="font-semibold text-lg">2) Press</h4>
+                  <p class="text-slate-700">
+                    Raw material is pressed with a target pressure to reach the correct form and density.
+                    Some loss can occur due to cracks, mis-presses, or mechanical variation.
+                  </p>
+                  <ul class="mt-2 list-disc list-inside text-slate-700 text-sm">
+                    <li><span class="font-medium">Columns:</span> <code>pressure_psi</code>, <code>vol_press_out</code></li>
+                    <li><span class="font-medium">Prediction input:</span> press pressure (psi).</li>
+                    <li><span class="font-medium">Actual override:</span> Provide <code>vol_press_out</code> to lock this stage as green.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 class="font-semibold text-lg">3) Glaze</h4>
+                  <p class="text-slate-700">
+                    Tiles receive a glaze coating; viscosity and delivery pressure affect coverage and defects.
+                  </p>
+                  <ul class="mt-2 list-disc list-inside text-slate-700 text-sm">
+                    <li><span class="font-medium">Columns:</span> <code>glaze_pressure_psi</code>, <code>vol_glaze_out</code></li>
+                    <li><span class="font-medium">Prediction input:</span> glaze pressure (psi).</li>
+                    <li><span class="font-medium">Actual override:</span> Provide <code>vol_glaze_out</code>.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 class="font-semibold text-lg">4) Kiln</h4>
+                  <p class="text-slate-700">
+                    Firing drives most dimensional and strength changes. Multiple setpoints influence yield.
+                  </p>
+                  <div class="mt-2 grid sm:grid-cols-2 gap-3 text-sm text-slate-700">
+                    <ul class="list-disc list-inside">
+                      <li><code>max_temp</code> (°C)</li>
+                      <li><code>cooling_profile</code></li>
+                      <li><code>moisture_pct</code> (%)</li>
+                      <li><code>external_humidity</code> (%)</li>
+                    </ul>
+                    <ul class="list-disc list-inside">
+                      <li><code>air_flow_top_setting</code></li>
+                      <li><code>air_cooling</code></li>
+                      <li><code>thickness_mm</code> (mm)</li>
+                      <li><code>vol_kiln_out</code> (actual optional)</li>
+                    </ul>
+                  </div>
+                  <p class="mt-2 text-sm text-slate-700">
+                    If you don’t supply an actual (<code>vol_kiln_out</code>), the model predicts based on the above inputs.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 class="font-semibold text-lg">5) Sort (Final)</h4>
+                  <p class="text-slate-700">
+                    After inspection and grading, final acceptable material is counted. This determines the final yield:
+                    <code>Final Yield = vol_sort_out ÷ vol_start</code>.
+                  </p>
+                  <ul class="mt-2 list-disc list-inside text-slate-700 text-sm">
+                    <li><span class="font-medium">Column(s):</span> <code>vol_sort</code>/<code>vol_sort_out</code> (alias)</li>
+                    <li>The model may apply a rule-based factor here if no actuals are present.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <!-- Pages -->
+            <section id="pages" class="rounded-2xl border bg-white p-6 shadow-sm">
+              <h3 class="text-xl font-semibold mb-4">Pages in the Dashboard</h3>
+              <div class="space-y-5">
+                <div>
+                  <h4 class="font-semibold">Current Predictions</h4>
+                  <p class="text-slate-700">
+                    Input the Start amount and optionally supply actual volumes or setpoints at each stage (Press, Glaze, Kiln, Sort). The dashboard combines your actuals (green) with model predictions (yellow) for downstream stages. The chart displays remaining volume at each stage, loss vs. Start, and minimum required thresholds. Controls: set Start, enter actuals, and adjust setpoints (e.g., pressure, kiln temp, glaze pressure).
+                  </p>
+                </div>
+                <div>
+                  <h4 class="font-semibold">What If Predictions</h4>
+                  <p class="text-slate-700">
+                    Run hypothetical scenarios by adjusting process variables (e.g., change kiln max temp, air cooling, or recipe moisture) to see how predicted yield and losses shift. No data is saved—this is for testing the model’s response to new setpoints. Controls: freely adjust all setpoints and see predicted outcomes instantly.
+                  </p>
+                </div>
+                <div>
+                  <h4 class="font-semibold">Analytics</h4>
+                  <p class="text-slate-700">
+                    Browse historical production runs. Select a timestamp or filter by recipe to see actual and predicted volumes, loss breakdowns, and associated process variables (e.g., pressures, temperatures, moisture). Interactive charts allow zooming, panning, and hovering for detailed tooltips. Controls: select batch, filter by time or recipe, and zoom.
+                  </p>
+                </div>
+                <div>
+                  <h4 class="font-semibold">All Data</h4>
+                  <p class="text-slate-700">
+                    View the complete <code>tiles.csv</code> dataset as a table. Columns include all process and recipe variables, actuals, and predictions. Useful for validation, spot-checking, and exporting data. Controls: filter, sort, and export rows.
+                  </p>
+                </div>
+                <div>
+                  <h4 class="font-semibold">Yield Explorer</h4>
+                  <p class="text-slate-700">
+                    Analyze yield distributions across batches. Filter by recipe, date range, or setpoint values. See cohort statistics (medians, quartiles) for each stage and a histogram of final yields. Export summary statistics or per-batch data. Controls: filter by recipe/time, adjust histogram bins, export data.
+                  </p>
+                </div>
+                <div>
+                  <h4 class="font-semibold">Batch Compare</h4>
+                  <p class="text-slate-700">
+                    Select and compare multiple batches side-by-side. Visualize differences in loss at each stage, setpoint values, and final yields. Useful for identifying outliers and process drift. Controls: select batches, highlight differences, and export comparisons.
+                  </p>
+                </div>
+                <div>
+                  <h4 class="font-semibold">Recipe Analytics</h4>
+                  <p class="text-slate-700">
+                    View aggregated statistics by recipe: typical setpoints, variability, and average yield. Explore how changes in recipe-level variables (e.g., target pressure, moisture) affect outcomes. Controls: select recipe, view trend lines, and compare across recipes.
+                  </p>
+                </div>
+                <div>
+                  <h4 class="font-semibold">Edit Recipe</h4>
+                  <p class="text-slate-700">
+                    Inspect and modify default setpoints for each recipe (e.g., target pressure, glaze amount, air cooling). Changes are saved locally and used as context for future predictions. Controls: edit per-recipe values, reset to medians, and save.
+                  </p>
+                </div>
+                <div>
+                  <h4 class="font-semibold">Info & How-To</h4>
+                  <p class="text-slate-700">
+                    This help page! Explains each dashboard page, process stages, data columns, and how to interpret charts and results.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Charts -->
+            <section id="charts" class="rounded-2xl border bg-white p-6 shadow-sm">
+              <h3 class="text-xl font-semibold mb-4">How to Read the Charts</h3>
+
+              <div class="space-y-6">
+                <div>
+                  <h4 class="font-semibold">Material Loss Per Stage (line)</h4>
+                  <ul class="mt-2 list-disc list-inside text-slate-700 text-sm">
+                    <li><span class="font-medium">Y-axis:</span> Remaining volume (same units as Start).</li>
+                    <li><span class="font-medium">Green points:</span> Actual data you entered.</li>
+                    <li><span class="font-medium">Yellow points:</span> Model predictions given current inputs.</li>
+                    <li><span class="font-medium">Dashed line:</span> Minimum required volume (if shown) for a comfortable pass.</li>
+                    <li><span class="font-medium">Tooltip:</span> Shows value, loss vs Start, and min required (if applicable).</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h4 class="font-semibold">Loss Breakdown</h4>
+                  <p class="text-slate-700 text-sm">
+                    Donut bands show cumulative loss at Press, Glaze, and Kiln. A horizontal bar shows remaining percentage per stage.
+                    Hover the legend to see loss % by stage.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 class="font-semibold">Yield Explorer Charts</h4>
+                  <ul class="mt-2 list-disc list-inside text-slate-700 text-sm">
+                    <li><span class="font-medium">Stage Volumes:</span> Median remaining volume at each stage for the filtered cohort.</li>
+                    <li><span class="font-medium">Final Yield Histogram:</span> Distribution of <code>Sort ÷ Start × 100%</code> across the cohort.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <!-- Data columns -->
+            <section id="data" class="rounded-2xl border bg-white p-6 shadow-sm">
+              <h3 class="text-xl font-semibold mb-4">Data Columns & Units</h3>
+              <p class="text-slate-700">
+                We read from <code>tiles.csv</code>. Some columns have aliases — we’ll use whichever exists. The table below lists all major columns, including new recipe and process variables.
+              </p>
+              <div class="mt-4 overflow-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-slate-50 text-slate-600">
+                    <tr>
+                      <th class="text-left px-3 py-2">Friendly Name</th>
+                      <th class="text-left px-3 py-2">CSV Column(s)</th>
+                      <th class="text-left px-3 py-2">Notes / Units</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="border-t"><td class="px-3 py-2">Datetime</td><td class="px-3 py-2"><code>datetime</code></td><td class="px-3 py-2">Timestamp (ISO format)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Recipe ID</td><td class="px-3 py-2"><code>recipe_id</code></td><td class="px-3 py-2">Integer identifier for recipe</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Gloss Type</td><td class="px-3 py-2"><code>gloss_type</code></td><td class="px-3 py-2">Type of glaze finish (e.g., matte, gloss, satin)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Gloss Target (g/tile)</td><td class="px-3 py-2"><code>gloss_amount_target_g_per_tile</code></td><td class="px-3 py-2">Target glaze amount per tile (grams per tile)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Start</td><td class="px-3 py-2"><code>vol_start</code></td><td class="px-3 py-2">Baseline input volume (ft² or pieces)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Press</td><td class="px-3 py-2"><code>vol_press</code>, <code>vol_press_out</code></td><td class="px-3 py-2">Press output volume (ft² or pieces)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Glaze</td><td class="px-3 py-2"><code>vol_glaze</code>, <code>vol_glaze_out</code></td><td class="px-3 py-2">Glaze output volume (ft² or pieces)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Kiln</td><td class="px-3 py-2"><code>vol_kiln</code>, <code>vol_kiln_out</code></td><td class="px-3 py-2">Kiln output volume (ft² or pieces)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Sort (Final)</td><td class="px-3 py-2"><code>vol_sort</code>, <code>vol_sort_out</code></td><td class="px-3 py-2">Final acceptable volume (ft² or pieces)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Press Pressure</td><td class="px-3 py-2"><code>pressure_psi</code>, <code>target_pressure</code></td><td class="px-3 py-2">Actual or target press pressure (psi)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Actual Pressure</td><td class="px-3 py-2"><code>actual_pressure</code></td><td class="px-3 py-2">Measured press pressure (psi)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Layers Tossed</td><td class="px-3 py-2"><code>layers_tossed</code></td><td class="px-3 py-2">Number of layers rejected/tossed (count)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Desired Thickness</td><td class="px-3 py-2"><code>desired_thickness</code></td><td class="px-3 py-2">Target tile thickness (mm)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Thickness</td><td class="px-3 py-2"><code>thickness_mm</code></td><td class="px-3 py-2">Measured tile thickness (mm)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Glaze Pressure</td><td class="px-3 py-2"><code>glaze_pressure_psi</code></td><td class="px-3 py-2">Glaze delivery pressure (psi)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Max Temp</td><td class="px-3 py-2"><code>max_temp</code>, <code>recipe_max_temp</code>, <code>kiln_max_temp</code></td><td class="px-3 py-2">Maximum kiln temperature (°C)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Cooling Profile</td><td class="px-3 py-2"><code>cooling_profile</code></td><td class="px-3 py-2">Kiln cooling profile (unitless scale)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Moisture</td><td class="px-3 py-2"><code>moisture_pct</code>, <code>recipe_moisture</code>, <code>kiln_moisture</code></td><td class="px-3 py-2">Material or kiln moisture (% by weight)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Ambient Humidity</td><td class="px-3 py-2"><code>external_humidity</code>, <code>recipe_humidity</code>, <code>kiln_humidity</code></td><td class="px-3 py-2">Ambient/kiln humidity (%)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Air Flow (Top)</td><td class="px-3 py-2"><code>air_flow_top_setting</code></td><td class="px-3 py-2">Air flow setting (unitless scale)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Air Cooling</td><td class="px-3 py-2"><code>air_cooling</code>, <code>recipe_air_cooling</code>, <code>kiln_air_cooling</code></td><td class="px-3 py-2">Air cooling setpoint (unitless scale)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Recipe Air Flow</td><td class="px-3 py-2"><code>recipe_air_flow</code></td><td class="px-3 py-2">Recipe-level air flow setpoint (unitless scale)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Kiln Air Flow</td><td class="px-3 py-2"><code>kiln_air_flow</code></td><td class="px-3 py-2">Kiln air flow setting (unitless scale)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Delta Air Cooling</td><td class="px-3 py-2"><code>delta_air_cooling</code></td><td class="px-3 py-2">Difference between recipe and kiln air cooling (unitless)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Delta Moisture</td><td class="px-3 py-2"><code>delta_moisture</code></td><td class="px-3 py-2">Difference between recipe and kiln moisture (%)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Delta Air Flow</td><td class="px-3 py-2"><code>delta_air_flow</code></td><td class="px-3 py-2">Difference between recipe and kiln air flow (unitless)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Delta Max Temp</td><td class="px-3 py-2"><code>delta_max_temp</code></td><td class="px-3 py-2">Difference between recipe and kiln max temp (°C)</td></tr>
+                    <tr class="border-t"><td class="px-3 py-2">Delta Humidity</td><td class="px-3 py-2"><code>delta_humidity</code></td><td class="px-3 py-2">Difference between recipe and kiln humidity (%)</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="mt-4 text-slate-700 text-sm">
+                <span class="font-semibold">Notes:</span> <br>
+                <span class="font-medium">Delta columns</span> (e.g., <code>delta_air_cooling</code>) represent the difference between recipe setpoints and actual kiln settings for that variable. <br>
+                <span class="font-medium">Recipe columns</span> (e.g., <code>recipe_air_cooling</code>, <code>recipe_max_temp</code>) are setpoint values defined per recipe, editable in the Edit Recipe page. <br>
+                <span class="font-medium">Kiln columns</span> (e.g., <code>kiln_air_cooling</code>) are the actual values observed or used during firing.<br>
+                Units for volumes are typically ft² or pieces, as specified by your production context.
+              </p>
+            </section>
+
+            <!-- FAQ -->
+            <section id="faq" class="rounded-2xl border bg-white p-6 shadow-sm">
+              <h3 class="text-xl font-semibold mb-4">FAQ & Tips</h3>
+              <div class="space-y-5 text-slate-800">
+                <div>
+                  <p class="font-semibold">What does “Final Yield” mean?</p>
+                  <p class="text-slate-700 text-sm">It’s the percentage of material that remains acceptable at Sort relative to Start: <code>(vol_sort_out ÷ vol_start) × 100%</code>.</p>
+                </div>
+                <div>
+                  <p class="font-semibold">Why are some points green and others yellow?</p>
+                  <p class="text-slate-700 text-sm">Green = actual values you supplied for a stage. Yellow = the model’s prediction based on your inputs and recipe context.</p>
+                </div>
+                <div>
+                  <p class="font-semibold">What’s the “Scrub” control I saw?</p>
+                  <p class="text-slate-700 text-sm">
+                    “Scrub” is a quick tidy-up/reset control in Analytics UIs: it clears ad-hoc filters/zoom/hover state so you can re-focus on a clean view.
+                    It doesn’t delete data or change the dataset.
+                  </p>
+                </div>
+                <div>
+                  <p class="font-semibold">How do recipe setpoints affect predictions?</p>
+                  <p class="text-slate-700 text-sm">
+                    If a model was trained with recipe-level features, we’ll use your “Edit Recipe” values (or medians) as context. Changing them can shift predicted ratios downstream (especially at Kiln).
+                  </p>
+                </div>
+                <div>
+                  <p class="font-semibold">Why don’t I see min-required (dashed) everywhere?</p>
+                  <p class="text-slate-700 text-sm">
+                    Minimum thresholds only show where the model provides a margin (e.g., predicted stages) or where a rule is defined. If a stage is fully actual, the dashed guide may be hidden.
+                  </p>
+                </div>
+                <div>
+                  <p class="font-semibold">Where are my changes saved?</p>
+                  <p class="text-slate-700 text-sm">
+                    Recipe edits are saved locally in your browser (<code>localStorage</code>) as <code>pb_recipe_setpoints_v1</code>. Other pages can read these values.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Quick Start -->
+            <section class="rounded-2xl border bg-white p-6 shadow-sm">
+              <h3 class="text-xl font-semibold mb-2">Quick Start for First-Time Users</h3>
+              <ol class="list-decimal list-inside text-slate-700 space-y-2">
+                <li>Open <span class="font-medium">Current Loss Predictions</span>, choose a recipe, and enter <span class="font-medium">Start</span>.</li>
+                <li>(Optional) Add actuals for Press/Glaze/Kiln to lock those stages (green).</li>
+                <li>Add setpoints like pressure or kiln parameters to unlock predictions (yellow).</li>
+                <li>Review the line chart tooltips for loss vs. Start and min-required guides.</li>
+                <li>Use <span class="font-medium">Yield Explorer</span> to see how similar runs performed historically.</li>
+                <li>In <span class="font-medium">Edit Recipe</span>, fine-tune setpoints and save.</li>
+              </ol>
+            </section>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
