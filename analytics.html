@@ -265,57 +265,108 @@
 
     // Chart instances
     let zoomFactor = 1.0;
-    const flowChart = new Chart(lineCtx, {
-      type: 'line',
-      data: { labels: STAGE_LABELS, datasets: [{
-        label: 'Value',
-        data: [],
-        borderColor: '#0B1F52',
-        backgroundColor: '#0B1F52' + '33',
-        pointBackgroundColor: '#0B1F52',
-        pointRadius: 4, pointHoverRadius: 6, tension: 0.3, fill: true
-      }]},
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: {
-          x: { grid: { display: false } },
-          y: { min: 0, grid: { color: PB_GRAY_L } }  // <- force start at 0
+// --- Line Chart (Fixed hover tooltips) ---
+const flowChart = new Chart(lineCtx, {
+  type: 'line',
+  data: {
+    labels: STAGE_LABELS,
+    datasets: [{
+      label: 'Volume (ft²)',
+      data: [],
+      borderColor: '#0B1F52',
+      backgroundColor: '#0B1F5233',
+      pointBackgroundColor: '#0B1F52',
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.3,
+      fill: true,
+    }],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: { grid: { display: false } },
+      y: { beginAtZero: true, grid: { color: PB_GRAY_L } },
+    },
+    plugins: {
+      tooltip: {
+        enabled: true,
+        mode: 'nearest',
+        intersect: false,
+        usePointStyle: true,
+        backgroundColor: '#0B1F52',
+        titleColor: '#fff',
+        bodyColor: '#fff',
+        callbacks: {
+          title: (items) => {
+            const i = items[0].dataIndex;
+            return `Stage ${i + 1}: ${STAGE_LABELS[i]}`;
+          },
+          label: (ctx) => {
+            const value = ctx.parsed.y;
+            return `Volume: ${Number(value).toLocaleString()} ft²`;
+          },
+afterBody: (items) => {
+  if (!currentRow) return '';
+  const i = items[0].dataIndex;
+  const n = (key, suf = '', digits = 2) => {
+    const v = toNum(currentRow[key]);
+    return Number.isFinite(v) ? `${v.toFixed(digits)}${suf}` : '—';
+  };
+  const s = (key) => currentRow[key] || '—';
+
+  let lines = [];
+
+  switch (i) {
+    case 0: // Start
+      lines.push(`Recipe ID: ${s('recipe_id')}`);
+      lines.push(`Gloss Type: ${s('gloss_type')}`);
+      lines.push(`Gloss Target: ${n('gloss_amount_target_g_per_tile', ' g/tile', 1)}`);
+      break;
+
+    case 1: // Press
+      lines.push(`Target Pressure: ${n('target_pressure', ' psi', 0)}`);
+      lines.push(`Actual Pressure: ${n('actual_pressure', ' psi', 0)}`);
+      lines.push(`Layers Tossed: ${n('layers_tossed', '', 0)}`);
+      lines.push(`Desired Thickness: ${n('desired_thickness', ' mm', 1)}`);
+      break;
+
+    case 2: // Glaze
+      lines.push(`Air Cooling: ${n('recipe_air_cooling', '', 1)}`);
+      lines.push(`Moisture: ${n('recipe_moisture', ' %', 2)}`);
+      lines.push(`Air Flow: ${n('recipe_air_flow', '', 1)}`);
+      lines.push(`Max Temp: ${n('recipe_max_temp', ' °C', 1)}`);
+      lines.push(`Humidity: ${n('recipe_humidity', ' %', 1)}`);
+      break;
+
+    case 3: // Kiln
+      lines.push(`Kiln Air Cooling: ${n('kiln_air_cooling', '', 1)}`);
+      lines.push(`Kiln Moisture: ${n('kiln_moisture', ' %', 2)}`);
+      lines.push(`Kiln Air Flow: ${n('kiln_air_flow', '', 1)}`);
+      lines.push(`Kiln Max Temp: ${n('kiln_max_temp', ' °C', 1)}`);
+      lines.push(`Kiln Humidity: ${n('kiln_humidity', ' %', 1)}`);
+      break;
+
+    case 4: // Sort
+      lines.push(`Sort Yield: ${n('vol_sort_out', ' ft²', 0)}`);
+      lines.push(`Δ Air Cooling: ${n('delta_air_cooling', '', 2)}`);
+      lines.push(`Δ Moisture: ${n('delta_moisture', '', 2)}`);
+      lines.push(`Δ Air Flow: ${n('delta_air_flow', '', 2)}`);
+      lines.push(`Δ Max Temp: ${n('delta_max_temp', ' °C', 1)}`);
+      lines.push(`Δ Humidity: ${n('delta_humidity', ' %', 1)}`);
+      break;
+  }
+
+  return lines.join('\n');
+}
         },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              title: (items) => {
-                const i = items[0].dataIndex;
-                return `Stage ${i + 1} — ${STAGE_LABELS[i]}`;
-              },
-              afterBody: (items) => {
-                const i = items[0].dataIndex;
-                if (!currentRow) return [];
-                const n = (v, suf='') => Number.isFinite(toNum(v)) ? `${toNum(v)}${suf}` : '—';
-                const d = (v, k=1, suf='') => Number.isFinite(toNum(v)) ? `${toNum(v).toFixed(k)}${suf}` : '—';
-                const extra = [];
-                if (i === 0) { extra.push(`Recipe: ${currentRow.recipe_id || '—'}`); }
-                if (i === 1) { extra.push(`Pressure: ${n(currentRow.pressure_psi,' psi')}`); }
-                if (i === 2) {
-                  const gp = currentRow.glaze_pressure_psi || currentRow.pressure_psi;
-                  extra.push(`Glaze Pressure: ${n(gp,' psi')}`);
-                }
-                if (i === 3) {
-                  extra.push(`Max Temp: ${n(currentRow.max_temp,' °C')}`);
-                  extra.push(`Cooling: ${d(currentRow.cooling_profile,1)}`);
-                  extra.push(`Moisture: ${d(currentRow.moisture_pct,1,' %')}`);
-                  extra.push(`Humidity: ${n(currentRow.external_humidity,' %')}`);
-                  extra.push(`Air Flow: ${d(currentRow.air_flow_top_setting,1)}`);
-                  extra.push(`Air Cooling: ${d(currentRow.air_cooling,1)}`);
-                  extra.push(`Thickness: ${d(currentRow.thickness_mm,1,' mm')}`);
-                }
-                return extra;
-              }
-            }
-          }
-        }
-      }
-    });
+      },
+    },
+    interaction: { mode: 'nearest', intersect: false },
+    hover: { mode: 'nearest', intersect: false },
+  },
+});
 
 // --- Multi-Ring Donut (5 rings for all stages) ---
 const BG = '#EEF2F6';  // background gray

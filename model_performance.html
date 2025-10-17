@@ -1,108 +1,210 @@
-<script>
-/* ========= helpers & chart setup ========= */
-const STAGES=['Start','Press','Glaze','Kiln','Sort'];
-const $=id=>document.getElementById(id);
-const fmt=n=>Number.isFinite(n)?n.toLocaleString():'–';
-const pct=x=>Number.isFinite(x)?x.toFixed(2)+'%':'–';
-const PB_GRAY_L='#CFD3DA';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analytics — Model Performance | Portobello Dashboard</title>
 
-const lossChart=new Chart($('wfLine').getContext('2d'),{
-  type:'line',
-  data:{labels:STAGES,datasets:[
-    {label:'Predicted',data:[],borderWidth:2,tension:0.3,borderColor:'#7E22CE',pointBackgroundColor:'#7E22CE',pointRadius:4},
-    {label:'Min Threshold',data:[],borderDash:[6,6],borderWidth:1.5,borderColor:'#F59E0B',pointRadius:3}
-  ]},
-  options:{responsive:true,maintainAspectRatio:false,
-    scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:PB_GRAY_L}}},
-    plugins:{tooltip:{callbacks:{
-      title:(it)=>'Stage '+(it[0].dataIndex+1)+' — '+STAGES[it[0].dataIndex],
-      label:(it)=>fmt(it.parsed.y)+' ft²'
-    }}}}
-});
+  <!-- Inter + Tailwind -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
+          colors: {
+            pbBlue: '#0B1F52',
+            pbGrayLight: '#CFD3DA',
+            pbGrayMid:   '#7C8390',
+            pbGrayDark:  '#434A52',
+            press: '#3B82F6',
+            glaze: '#10B981',
+            kiln: '#F59E0B',
+            sort: '#EF4444'
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
 
-/* ========= python & model ========= */
-let pyodide,modelLoaded=false;
-async function initPy(){
-  $('wfStatus').textContent='Loading Python…';
-  pyodide=await loadPyodide();
-  await pyodide.loadPackage(['numpy','pandas','scikit-learn','joblib']);
-  const code=`${/* inject working predictor from stage demo */''}
-import math, joblib, pandas as pd, numpy as np
-bundle=None
-press_model=glaze_model=kiln_model=None
-THRESH_MARGIN=0.03; SORT_MIN=0.90; SORT_DEFAULT=0.90
-def load_model(p):
-  global bundle,press_model,glaze_model,kiln_model
-  bundle=joblib.load(p)
-  press_model=bundle['models']['press_ratio']
-  glaze_model=bundle['models']['glaze_ratio']
-  kiln_model=bundle['models']['kiln_ratio']
-  return True
-def predict(d):
-  r={'stages':{s:{'status':'blocked','amount':None,'min_required':None} for s in ['start','press','glaze','kiln','sort']}}
-  vstart=float(d.get('vol_start',0) or 0)
-  if not vstart: return r
-  r['stages']['start'].update(status='actual',amount=int(vstart))
-  pr=float(press_model.predict(pd.DataFrame([{'vol_start':vstart}]))[0])
-  press=vstart*pr; r['stages']['press'].update(status='pred',amount=int(press),min_required=int(vstart*(pr-THRESH_MARGIN)))
-  gr=float(glaze_model.predict(pd.DataFrame([{'vol_press_out':press}]))[0])
-  glaze=press*gr; r['stages']['glaze'].update(status='pred',amount=int(glaze),min_required=int(press*(gr-THRESH_MARGIN)))
-  kr=float(kiln_model.predict(pd.DataFrame([{'vol_glaze_out':glaze}]))[0])
-  kiln=glaze*kr; r['stages']['kiln'].update(status='pred',amount=int(kiln),min_required=int(glaze*(kr-THRESH_MARGIN)))
-  sort=kiln*SORT_DEFAULT; r['stages']['sort'].update(status='pred',amount=int(sort),min_required=int(kiln*(SORT_MIN)))
-  return r
-`;
-  await pyodide.runPythonAsync(code);
-  const buf=await (await fetch('ml_model.joblib',{cache:'no-store'})).arrayBuffer();
-  try{pyodide.FS.mkdir('/tmp');}catch{}
-  pyodide.FS.writeFile('/tmp/ml_model.joblib',new Uint8Array(buf));
-  await pyodide.runPythonAsync('load_model("/tmp/ml_model.joblib")');
-  modelLoaded=true;
-  $('wfStatus').textContent='Model loaded ✅';
-}
-initPy();
+<body class="h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800 font-sans">
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
+    <div class="relative w-full py-5 pl-3 flex items-center">
+      <a href="/" class="shrink-0">
+        <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-16 w-auto object-contain block" />
+      </a>
+      <h1 class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none">
+        Tile Material Dashboard
+      </h1>
+    </div>
+  </header>
 
-/* ========= compute & chart update ========= */
-function autoDeltas(){
-  const r=['air_cooling','moisture','air_flow','max_temp','humidity'];
-  r.forEach(x=>{
-    const rv=Number($('wf_recipe_'+x).value),kv=Number($('wf_kiln_'+x).value);
-    if(!isNaN(rv)&&!isNaN(kv))$('wf_delta_'+x).value=(kv-rv).toFixed(2);
-  });
-}
-function payload(){
-  autoDeltas();
-  const p={};
-  document.querySelectorAll('#panel-whatif input,#panel-whatif select').forEach(el=>{
-    let v=el.value;
-    if(el.type==='number'||el.id.startsWith('wf_')){v=Number(v);if(isNaN(v))v=null;}
-    p[el.id.replace('wf_','')]=v;
-  });
-  return p;
-}
-async function runWF(){
-  $('wfStatus').textContent='Predicting…';
-  const pl=payload();
-  if(!pl.vol_start){$('wfHint').textContent='Enter a start volume';return;}
-  let res;
-  if(modelLoaded){
-    const f=pyodide.globals.get('predict');
-    const pyIn=pyodide.toPy(pl);
-    const pyOut=f(pyIn);
-    res=pyOut.toJs();pyIn.destroy();pyOut.destroy();f.destroy();
-  }else{ // fallback
-    const s=pl.vol_start,v=[s,s*0.98,s*0.97,s*0.95,s*0.89];
-    res={stages:{start:{amount:v[0]},press:{amount:v[1]},glaze:{amount:v[2]},kiln:{amount:v[3]},sort:{amount:v[4]}}};
-  }
-  const st=res.stages;
-  const vols=[st.start.amount,st.press.amount,st.glaze.amount,st.kiln.amount,st.sort.amount];
-  const mins=[st.start.min_required,st.press.min_required,st.glaze.min_required,st.kiln.min_required,st.sort.min_required];
-  lossChart.data.datasets[0].data=vols;
-  lossChart.data.datasets[1].data=mins;
-  lossChart.update();
-  const y=(vols[4]/vols[0])*100;
-  $('wfHint').textContent=`Final yield ≈ ${pct(y)} (${fmt(vols[4])} ft² of ${fmt(vols[0])})`;
-  $('wfStatus').textContent='Done ✅';
-}
-$('wfRun').addEventListener('click',runWF);
-</script>
+  <div class="flex flex-1 overflow-hidden">
+    <!-- Sidebar -->
+    <script src="sidebar.js" defer></script>
+
+    <!-- MAIN -->
+    <main class="flex-1 overflow-auto">
+      <div class="mx-auto max-w-7xl px-6 md:px-8 py-8">
+        <div class="flex items-center justify-between">
+          <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Model Performance</h2>
+          <div class="flex items-center gap-3">
+            <label class="text-sm text-slate-600">Upload eval file:</label>
+            <input id="evalFile" type="file" accept=".csv" class="text-xs bg-white border border-slate-300 rounded px-2 py-1">
+          </div>
+        </div>
+
+        <!-- Totals -->
+        <section class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <p class="text-slate-500 text-sm">Average MAPE</p>
+            <p id="kpiMape" class="text-3xl font-bold mt-1">—</p>
+          </div>
+          <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+            <p class="text-slate-500 text-sm">Average MAE</p>
+            <p id="kpiMae" class="text-3xl font-bold mt-1">—</p>
+          </div>
+        </section>
+
+        <!-- Combined Chart -->
+        <section class="mt-8 rounded-2xl border bg-white shadow-sm p-6">
+          <h3 class="text-xl font-semibold mb-3 text-slate-800">Stage Accuracy Overview</h3>
+          <canvas id="chartAccuracy" class="h-[26rem]"></canvas>
+          <p class="text-xs text-slate-500 mt-2">
+            Each color represents a stage: <span class="text-press font-medium">Press</span>, 
+            <span class="text-glaze font-medium">Glaze</span>, 
+            <span class="text-kiln font-medium">Kiln</span>, 
+            <span class="text-sort font-medium">Sort</span>.  
+            MAPE (%) and MAE (ft²) are displayed side by side.
+          </p>
+        </section>
+
+        <!-- Flags -->
+        <section class="mt-8 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-lg font-semibold text-slate-800">Recent Flags / Issues</h3>
+            <button id="reloadFlags" class="text-sm border rounded px-3 py-1 hover:bg-slate-50">Reload Flags</button>
+          </div>
+          <table class="w-full text-sm">
+            <thead class="bg-slate-100 text-slate-600">
+              <tr>
+                <th class="text-left px-2 py-1.5">Datetime</th>
+                <th class="text-left px-2 py-1.5">Recipe</th>
+                <th class="text-left px-2 py-1.5">Stage</th>
+                <th class="text-left px-2 py-1.5">Flag</th>
+              </tr>
+            </thead>
+            <tbody id="flagsTable"></tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const parseCSV = text => {
+      const lines = text.replace(/\r/g,'').split('\n').filter(l=>l.trim()!=='');
+      if(!lines.length) return {columns:[],rows:[]};
+      const headers = lines[0].split(',').map(h=>h.trim());
+      const rows = lines.slice(1).map(l=>{
+        const parts = l.split(',');
+        const o={}; headers.forEach((h,i)=>o[h]=parts[i]); return o;
+      });
+      return {columns:headers,rows};
+    };
+    const num = v => Number(String(v).replace(/,/g,'')) || 0;
+    const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+
+    async function loadEval(text){
+      const csv = parseCSV(text);
+      const rows = csv.rows.map(r=>({
+        stage:(r.stage||'').toUpperCase(),
+        abs_err:num(r.abs_error_ft2),
+        pct_err:num(r.pct_error)
+      }));
+
+      const stages = ['PRESS','GLAZE','KILN','SORT'];
+      const colors = ['#3B82F6','#10B981','#F59E0B','#EF4444'];
+
+      const stats = stages.map(s=>{
+        const x = rows.filter(r=>r.stage===s);
+        return {stage:s, mae:avg(x.map(r=>r.abs_err)), mape:avg(x.map(r=>r.pct_err))*100};
+      });
+
+      $('kpiMape').textContent = avg(stats.map(s=>s.mape)).toFixed(2) + '%';
+      $('kpiMae').textContent = Math.round(avg(stats.map(s=>s.mae))) + ' ft²';
+
+      makeCombined(stats, colors);
+    }
+
+    function makeCombined(stats, colors){
+      const ctx = $('chartAccuracy');
+      const labels = ['PRESS','GLAZE','KILN','SORT'];
+      const mapeData = stats.map(s=>s.mape);
+      const maeData = stats.map(s=>s.mae);
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'MAPE (%)', data: mapeData, backgroundColor: colors.map(c=>c+'CC') },
+            { label: 'MAE (ft²)', data: maeData, backgroundColor: colors.map(c=>c+'55') }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#E5E7EB' } },
+            x: { ticks: { color: '#374151' } }
+          },
+          plugins: {
+            legend: { position: 'bottom', labels: { usePointStyle:true } },
+            tooltip: { mode:'index' }
+          }
+        }
+      });
+    }
+
+    async function loadFlags(){
+      try{
+        const txt = await (await fetch('tiles_flags_only.csv')).text();
+        const csv = parseCSV(txt);
+        $('flagsTable').innerHTML = csv.rows.slice(0,10).map(r=>{
+          const flag = r.press_flag || r.glaze_flag || r.kiln_flag || r.sort_flag || '';
+          const stage = r.press_flag ? 'Press' : r.glaze_flag ? 'Glaze' : r.kiln_flag ? 'Kiln' : r.sort_flag ? 'Sort' : '';
+          const color = stage==='Press'?'text-press':stage==='Glaze'?'text-glaze':stage==='Kiln'?'text-kiln':'text-sort';
+          return `<tr class="border-t">
+            <td class="px-2 py-1.5">${r.datetime||''}</td>
+            <td class="px-2 py-1.5">${r.recipe_id||''}</td>
+            <td class="px-2 py-1.5 ${color} font-medium">${stage}</td>
+            <td class="px-2 py-1.5">${flag}</td>
+          </tr>`;
+        }).join('');
+      }catch{
+        $('flagsTable').innerHTML = '<tr><td colspan="4" class="px-3 py-2 text-slate-500">No flags found.</td></tr>';
+      }
+    }
+
+    (async()=>{
+      try{
+        const txt = await (await fetch('tiles_predictions_eval.csv')).text();
+        loadEval(txt);
+      }catch(e){ console.warn('no eval file found'); }
+      loadFlags();
+    })();
+
+    $('evalFile').addEventListener('change', async e=>{
+      const file=e.target.files[0]; if(!file)return;
+      const txt=await file.text(); loadEval(txt);
+    });
+    $('reloadFlags').addEventListener('click', loadFlags);
+  </script>
+</body>
+</html>

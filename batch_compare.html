@@ -104,7 +104,6 @@
   </div>
 
 <script>
-/* ====== Utils & Setup ====== */
 const PB_GRAY_L='#CFD3DA';
 const STAGES=['Start','Press','Glaze','Kiln','Sort'];
 Chart.defaults.font.family='Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
@@ -114,6 +113,7 @@ Chart.defaults.plugins.legend.display=false;
 const $=id=>document.getElementById(id);
 const toNum=v=>{ if(v==null||v==='')return NaN; const n=Number(String(v).replace(/,/g,'')); return Number.isFinite(n)?n:NaN; };
 const uniq=arr=>Array.from(new Set(arr));
+
 function parseCSV(text){
   const clean=text.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
   const lines=clean.split('\n').filter(l=>l.trim()!=='');
@@ -132,6 +132,8 @@ function parseCSV(text){
   });
   return {columns:headers, rows};
 }
+
+// -------- STAGE KEYS --------
 const VOL_ALIASES=[
   ['vol_start'],
   ['vol_press','vol_press_out'],
@@ -146,27 +148,23 @@ function pickVols(row, columns){
   });
 }
 
-/* ====== Data load ====== */
+// -------- STATE --------
 const DATA={columns:[], rows:[]};
 let cmpChart=null;
 
+// -------- LOAD + INIT --------
 fetch('tiles.csv')
   .then(r=>r.text())
   .then(txt=>{
     Object.assign(DATA, parseCSV(txt));
-    $('dataStatus').textContent = `${DATA.rows.length} rows loaded`;
-    initControls();
+    $('dataStatus').textContent=`${DATA.rows.length} rows loaded`;
     initChart();
+    populateDropdowns();
+    autoCompareLatest();
   })
   .catch(()=>{$('dataStatus').textContent='Could not load tiles.csv';});
 
-function initControls(){
-  const times=uniq(DATA.rows.map(r=>r.datetime)).filter(Boolean).sort();
-  $('cmpA').innerHTML=times.map(t=>`<option value="${t}">${t}</option>`).join('');
-  $('cmpB').innerHTML=times.map(t=>`<option value="${t}">${t}</option>`).join('');
-  const recipes=uniq(DATA.rows.map(r=>r.recipe_id)).filter(Boolean).sort((a,b)=>Number(a)-Number(b));
-  $('cmpRecipe').innerHTML = `<option value="">All</option>` + recipes.map(r=>`<option value="${r}">${r}</option>`).join('');
-}
+// -------- CHART --------
 function initChart(){
   cmpChart = new Chart($('cmpLine'), {
     type:'line',
@@ -181,24 +179,55 @@ function initChart(){
   });
 }
 
-$('cmpSwap').addEventListener('click', ()=>{
-  const a=$('cmpA').value, b=$('cmpB').value;
-  $('cmpA').value=b; $('cmpB').value=a;
-});
+// -------- DATETIME HELPERS --------
+function formatDT(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  if(isNaN(d)) return iso;
+  return d.toLocaleString('en-US', {
+    month:'short', day:'numeric', year:'numeric',
+    hour:'numeric', minute:'2-digit', hour12:true
+  }).replace(',', ' —');
+}
 
-$('cmpRun').addEventListener('click', ()=>{
-  const timeA=$('cmpA').value, timeB=$('cmpB').value, rid=$('cmpRecipe').value;
-  let ra=DATA.rows.find(r=>r.datetime===timeA), rb=DATA.rows.find(r=>r.datetime===timeB);
-  if(rid){
-    const candA=DATA.rows.filter(r=>r.datetime===timeA && String(r.recipe_id)===String(rid));
-    const candB=DATA.rows.filter(r=>r.datetime===timeB && String(r.recipe_id)===String(rid));
-    if(candA.length) ra=candA[0];
-    if(candB.length) rb=candB[0];
-  }
-  if(!ra || !rb){ $('cmpStatus').textContent='No rows for chosen selections.'; return; }
+// -------- DROPDOWNS --------
+function populateDropdowns(){
+  const times=uniq(DATA.rows.map(r=>r.datetime))
+    .filter(Boolean)
+    .sort((a,b)=>new Date(a)-new Date(b));
+
+  $('cmpA').innerHTML=times.map(t=>`<option value="${t}">${formatDT(t)}</option>`).join('');
+  $('cmpB').innerHTML=times.map(t=>`<option value="${t}">${formatDT(t)}</option>`).join('');
+}
+
+// -------- AUTO-COMPARE --------
+function autoCompareLatest(){
+  const times=uniq(DATA.rows.map(r=>r.datetime))
+    .filter(Boolean)
+    .sort((a,b)=>new Date(a)-new Date(b));
+  if(times.length===0) return;
+  const timeA=times[times.length-2]||times[times.length-1];
+  const timeB=times[times.length-1];
+  $('cmpA').value=timeA;
+  $('cmpB').value=timeB;
+  runCompare();
+}
+
+// -------- RUN COMPARISON --------
+function runCompare(){
+  const timeA=$('cmpA').value;
+  const timeB=$('cmpB').value;
+  const ra=DATA.rows.find(r=>r.datetime===timeA);
+  const rb=DATA.rows.find(r=>r.datetime===timeB);
+  if(!ra||!rb){ $('cmpStatus').textContent='No rows for chosen selections.'; return; }
   $('cmpStatus').textContent='';
+  compareRows(ra, rb);
+}
 
-  const A=pickVols(ra, DATA.columns), B=pickVols(rb, DATA.columns);
+// -------- UPDATE CHART + TABLE --------
+function compareRows(ra, rb){
+  const A=pickVols(ra, DATA.columns);
+  const B=pickVols(rb, DATA.columns);
   cmpChart.data.datasets[0].data=A;
   cmpChart.data.datasets[1].data=B;
   cmpChart.update();
@@ -207,7 +236,7 @@ $('cmpRun').addEventListener('click', ()=>{
   const pctA=A.map(v=>startA>0?(v/startA*100):0);
   const pctB=B.map(v=>startB>0?(v/startB*100):0);
 
-  $('cmpTable').innerHTML = STAGES.map((s,i)=>{
+  $('cmpTable').innerHTML=STAGES.map((s,i)=>{
     const a=isFinite(pctA[i])?pctA[i].toFixed(2):'-';
     const b=isFinite(pctB[i])?pctB[i].toFixed(2):'-';
     const d=(isFinite(pctA[i])&&isFinite(pctB[i]))?(pctB[i]-pctA[i]).toFixed(2):'-';
@@ -220,9 +249,18 @@ $('cmpRun').addEventListener('click', ()=>{
     </tr>`;
   }).join('');
 
-  const yA = startA>0 ? (A[4]/startA*100) : NaN;
-  const yB = startB>0 ? (B[4]/startB*100) : NaN;
-  $('cmpSummary').textContent = `Final yield — A: ${isFinite(yA)?yA.toFixed(2):'-'}%  |  B: ${isFinite(yB)?yB.toFixed(2):'-'}%`;
+  const yA=startA>0?(A[4]/startA*100):NaN;
+  const yB=startB>0?(B[4]/startB*100):NaN;
+  $('cmpSummary').textContent=`Comparing: ${formatDT(ra.datetime)} vs ${formatDT(rb.datetime)}
+  — Final yield A: ${isFinite(yA)?yA.toFixed(2):'-'}%  |  B: ${isFinite(yB)?yB.toFixed(2):'-'}%`;
+}
+
+// -------- BUTTONS --------
+$('cmpRun').addEventListener('click', runCompare);
+$('cmpSwap').addEventListener('click', ()=>{
+  const a=$('cmpA').value, b=$('cmpB').value;
+  $('cmpA').value=b; $('cmpB').value=a;
+  runCompare();
 });
 </script>
 </body>
