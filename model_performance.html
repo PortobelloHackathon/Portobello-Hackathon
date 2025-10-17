@@ -1,375 +1,108 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Portobello — Model Performance</title>
+<script>
+/* ========= helpers & chart setup ========= */
+const STAGES=['Start','Press','Glaze','Kiln','Sort'];
+const $=id=>document.getElementById(id);
+const fmt=n=>Number.isFinite(n)?n.toLocaleString():'–';
+const pct=x=>Number.isFinite(x)?x.toFixed(2)+'%':'–';
+const PB_GRAY_L='#CFD3DA';
 
-  <!-- Inter font + Tailwind -->
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
-          colors: {
-            pbBlue: '#0B1F52',
-            pbSlate: '#6B7280',
-            pbGrayLight: '#CFD3DA',
-            pbGrayMid:   '#7C8390',
-            pbGrayDark:  '#434A52',
-            pbGreen: '#2BAF6A',
-            pbYellow: '#F4B000',
-            pbRed: '#DC2626'
-          }
-        }
-      }
-    }
-  </script>
+const lossChart=new Chart($('wfLine').getContext('2d'),{
+  type:'line',
+  data:{labels:STAGES,datasets:[
+    {label:'Predicted',data:[],borderWidth:2,tension:0.3,borderColor:'#7E22CE',pointBackgroundColor:'#7E22CE',pointRadius:4},
+    {label:'Min Threshold',data:[],borderDash:[6,6],borderWidth:1.5,borderColor:'#F59E0B',pointRadius:3}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,
+    scales:{x:{grid:{display:false}},y:{beginAtZero:true,grid:{color:PB_GRAY_L}}},
+    plugins:{tooltip:{callbacks:{
+      title:(it)=>'Stage '+(it[0].dataIndex+1)+' — '+STAGES[it[0].dataIndex],
+      label:(it)=>fmt(it.parsed.y)+' ft²'
+    }}}}
+});
 
-  <!-- Chart.js + Lucide icons -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-</head>
+/* ========= python & model ========= */
+let pyodide,modelLoaded=false;
+async function initPy(){
+  $('wfStatus').textContent='Loading Python…';
+  pyodide=await loadPyodide();
+  await pyodide.loadPackage(['numpy','pandas','scikit-learn','joblib']);
+  const code=`${/* inject working predictor from stage demo */''}
+import math, joblib, pandas as pd, numpy as np
+bundle=None
+press_model=glaze_model=kiln_model=None
+THRESH_MARGIN=0.03; SORT_MIN=0.90; SORT_DEFAULT=0.90
+def load_model(p):
+  global bundle,press_model,glaze_model,kiln_model
+  bundle=joblib.load(p)
+  press_model=bundle['models']['press_ratio']
+  glaze_model=bundle['models']['glaze_ratio']
+  kiln_model=bundle['models']['kiln_ratio']
+  return True
+def predict(d):
+  r={'stages':{s:{'status':'blocked','amount':None,'min_required':None} for s in ['start','press','glaze','kiln','sort']}}
+  vstart=float(d.get('vol_start',0) or 0)
+  if not vstart: return r
+  r['stages']['start'].update(status='actual',amount=int(vstart))
+  pr=float(press_model.predict(pd.DataFrame([{'vol_start':vstart}]))[0])
+  press=vstart*pr; r['stages']['press'].update(status='pred',amount=int(press),min_required=int(vstart*(pr-THRESH_MARGIN)))
+  gr=float(glaze_model.predict(pd.DataFrame([{'vol_press_out':press}]))[0])
+  glaze=press*gr; r['stages']['glaze'].update(status='pred',amount=int(glaze),min_required=int(press*(gr-THRESH_MARGIN)))
+  kr=float(kiln_model.predict(pd.DataFrame([{'vol_glaze_out':glaze}]))[0])
+  kiln=glaze*kr; r['stages']['kiln'].update(status='pred',amount=int(kiln),min_required=int(glaze*(kr-THRESH_MARGIN)))
+  sort=kiln*SORT_DEFAULT; r['stages']['sort'].update(status='pred',amount=int(sort),min_required=int(kiln*(SORT_MIN)))
+  return r
+`;
+  await pyodide.runPythonAsync(code);
+  const buf=await (await fetch('ml_model.joblib',{cache:'no-store'})).arrayBuffer();
+  try{pyodide.FS.mkdir('/tmp');}catch{}
+  pyodide.FS.writeFile('/tmp/ml_model.joblib',new Uint8Array(buf));
+  await pyodide.runPythonAsync('load_model("/tmp/ml_model.joblib")');
+  modelLoaded=true;
+  $('wfStatus').textContent='Model loaded ✅';
+}
+initPy();
 
-<body class="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
-  <!-- HEADER -->
-  <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
-    <div class="mx-auto max-w-7xl px-6 py-5 flex items-center gap-3">
-      <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-12 object-contain" />
-      <h1 class="text-white/95 text-xl font-semibold tracking-tight">Model Performance</h1>
-    </div>
-  </header>
-
-  <div class="flex flex-1 overflow-hidden">
-    <!-- SIDEBAR -->
-    <aside class="w-56 bg-white/70 backdrop-blur border-r shadow-sm">
-      <nav id="sidebarNav" class="mt-6 flex flex-col gap-1 px-3" aria-label="Primary"></nav>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="flex-1 overflow-auto">
-      <div class="mx-auto max-w-7xl px-6 lg:px-8 py-8 space-y-6">
-        <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Model Performance</h2>
-
-        <!-- KPI STRIP -->
-        <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-slate-500">Overall MAPE</span>
-              <i data-lucide="percent" class="w-4 h-4 text-pbBlue"></i>
-            </div>
-            <div id="kpiMape" class="mt-2 text-3xl font-semibold text-slate-900">—</div>
-            <div class="text-xs text-slate-500">Mean Absolute % Error across Press, Glaze, Kiln, Sort</div>
-          </div>
-
-          <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-slate-500">Overall MAE</span>
-              <i data-lucide="ruler" class="w-4 h-4 text-pbBlue"></i>
-            </div>
-            <div id="kpiMae" class="mt-2 text-3xl font-semibold text-slate-900">—</div>
-            <div class="text-xs text-slate-500">Mean Absolute Error (ft²) across stages</div>
-          </div>
-
-          <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-            <div class="flex items-center justify-between">
-              <span class="text-sm text-slate-500">Compliance</span>
-              <i data-lucide="shield-check" class="w-4 h-4 text-pbBlue"></i>
-            </div>
-            <div id="kpiCompliance" class="mt-2 text-3xl font-semibold text-slate-900">—</div>
-            <div class="text-xs text-slate-500">Batches meeting minimum required volume</div>
-          </div>
-        </section>
-
-        <!-- CHARTS GRID -->
-        <section class="grid grid-cols-12 gap-4">
-          <!-- MAPE by Stage -->
-          <div class="col-span-12 lg:col-span-6 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-slate-800">MAPE by Stage</h3>
-              <span class="text-xs text-slate-500">Lower is better</span>
-            </div>
-            <canvas id="chartMape" class="w-full h-[18rem]"></canvas>
-          </div>
-
-          <!-- MAE by Stage -->
-          <div class="col-span-12 lg:col-span-6 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-slate-800">MAE (ft²) by Stage</h3>
-              <span class="text-xs text-slate-500">Lower is better</span>
-            </div>
-            <canvas id="chartMae" class="w-full h-[18rem]"></canvas>
-          </div>
-
-          <!-- Compliance Donut -->
-          <div class="col-span-12 lg:col-span-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-slate-800">Overall Compliance</h3>
-              <i data-lucide="target" class="w-4 h-4 text-pbBlue"></i>
-            </div>
-            <div class="w-full h-[16rem] flex items-center justify-center">
-              <canvas id="chartCompliance" class="!w-48 !h-48"></canvas>
-            </div>
-          </div>
-
-          <!-- Flags -->
-          <div class="col-span-12 lg:col-span-8 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-slate-800">Flag Summary</h3>
-              <span class="text-xs text-slate-500">Counts by flag type</span>
-            </div>
-            <canvas id="chartFlags" class="w-full h-[16rem]"></canvas>
-          </div>
-
-          <!-- Scatter: Predicted vs Actual -->
-          <div class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-lg font-semibold text-slate-800">Predicted vs Actual (ft²)</h3>
-              <span class="text-xs text-slate-500">Dots near the diagonal = good</span>
-            </div>
-            <canvas id="chartScatter" class="w-full h-[22rem]"></canvas>
-          </div>
-        </section>
-      </div>
-    </main>
-  </div>
-
-  <script>
-    // ---------- NAV ----------
-    const NAV = [
-      { href: 'loss_predictions.html', label: 'Loss Predictions', icon: 'activity' },
-      { href: 'analytics.html',        label: 'Analytics',        icon: 'bar-chart-2' },
-      { href: 'tables.html',           label: 'Tables',           icon: 'table' },
-      { href: 'what_if.html',          label: 'What If',          icon: 'sliders-horizontal' },
-      { href: 'batch_compare.html',    label: 'Batch Compare',    icon: 'layers' },
-      { href: 'recipe.html',           label: 'Recipe',           icon: 'flask-conical' },
-      { href: 'model_performance.html',label: 'Model Performance',icon: 'gauge' }
-    ];
-    const sidebar = document.getElementById('sidebarNav');
-    sidebar.innerHTML = NAV.map(item => `
-      <a href="${item.href}" class="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-100 ${location.pathname.endsWith(item.href)?'bg-slate-100 text-pbBlue font-semibold':''}">
-        <i data-lucide="${item.icon}" class="w-4 h-4 ${location.pathname.endsWith(item.href)?'text-pbBlue':'text-slate-600'}"></i>
-        <span>${item.label}</span>
-      </a>`).join('');
-    // Activate icons
-    window.requestAnimationFrame(() => lucide.createIcons());
-
-    // ---------- CHART.JS DEFAULTS ----------
-    Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-    Chart.defaults.color = '#434A52';
-    Chart.defaults.plugins.legend.display = false;
-
-    // ---------- CSV PARSER ----------
-    function parseCSV(text){
-      const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim()!=='');
-      if(lines.length===0) return {columns:[],rows:[]};
-      const parseLine = (line)=>{
-        const res=[]; let cur=''; let inQ=false;
-        for(let i=0;i<line.length;i++){
-          const ch=line[i];
-          if(ch==='"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else { inQ=!inQ; } continue; }
-          if(ch===',' && !inQ){ res.push(cur); cur=''; continue; }
-          cur+=ch;
-        }
-        res.push(cur); return res;
-      };
-      const headers = parseLine(lines[0]).map(h=>h.trim());
-      const rows = lines.slice(1).map(l=>{
-        const parts=parseLine(l); const obj={};
-        for(let i=0;i<headers.length;i++) obj[headers[i]] = parts[i]!==undefined?parts[i].trim():'';
-        return obj;
-      });
-      return {columns:headers, rows};
-    }
-
-    // ---------- LOAD & BUILD ----------
-    (async function main(){
-      // Load evaluation CSV
-      let evalCsv, flagsCsv;
-      try { evalCsv = parseCSV(await (await fetch('tiles_predictions_eval.csv')).text()); } catch(e){ console.warn('eval csv missing', e); evalCsv = {columns:[],rows:[]}; }
-      try { flagsCsv = parseCSV(await (await fetch('tiles_flags_only.csv')).text()); } catch(e){ console.warn('flags csv missing', e); flagsCsv = {columns:[],rows:[]}; }
-
-      // Normalize column names we need:
-      // tiles_predictions_eval.csv expected columns:
-      // stage, predicted_amount_ft2, min_required_ft2, actual_amount_ft2, abs_error_ft2, pct_error, met_min
-      const evalRows = evalCsv.rows.map(r => ({
-        stage: (r.stage||'').toUpperCase(),
-        pred: num(r.predicted_amount_ft2),
-        actual: num(r.actual_amount_ft2),
-        abs_err: num(r.abs_error_ft2),
-        pct_err: num(r.pct_error), // fraction (0-1)
-        met_min: (r.met_min||'').toUpperCase() === 'YES'
-      }));
-
-      // Aggregate per stage
-      const byStage = groupBy(evalRows, 'stage');
-      const stages = ['PRESS','GLAZE','KILN','SORT'].filter(s => byStage[s]?.length);
-
-      const stageAgg = stages.map(s=>{
-        const rows = byStage[s];
-        const n = rows.length || 0;
-        const mae = avg(rows.map(x => x.abs_err));
-        const mape = avg(rows.map(x => x.pct_err))*100;
-        const comp = (rows.filter(x=>x.met_min).length / (n||1))*100;
-        return {stage:s, n, mae, mape, comp};
-      });
-
-      // Overall KPIs
-      const overallMape = avg(stageAgg.map(x => x.mape));
-      const overallMae  = avg(stageAgg.map(x => x.mae));
-      const overallComp = avg(stageAgg.map(x => x.comp));
-
-      // Fill KPI cards
-      setText('kpiMape', `${overallMape.toFixed(2)}%`);
-      setText('kpiMae',  `${Math.round(overallMae).toLocaleString()} ft²`);
-      setText('kpiCompliance', `${overallComp.toFixed(1)}%`);
-
-      // ----- Charts -----
-      // 1) MAPE bar
-      makeBar('chartMape',
-        stageAgg.map(x => labelStage(x.stage)),
-        stageAgg.map(x => x.mape),
-        'MAPE (%)',
-        '#2BAF6A'
-      );
-
-      // 2) MAE bar
-      makeBar('chartMae',
-        stageAgg.map(x => labelStage(x.stage)),
-        stageAgg.map(x => x.mae),
-        'MAE (ft²)',
-        '#0B1F52'
-      );
-
-      // 3) Compliance donut
-      makeDonut('chartCompliance', overallComp);
-
-      // 4) Flags bar
-      const flags = flagsCsv.rows;
-      // Count any *_flag columns that are non-empty (press_flag, glaze_flag, kiln_flag, sort_flag)
-      const flagCols = (flagsCsv.columns||[]).filter(c => c.endsWith('_flag'));
-      const flagCounts = {};
-      flags.forEach(r=>{
-        flagCols.forEach(c=>{
-          const v = (r[c]||'').trim();
-          if(v){
-            flagCounts[v] = (flagCounts[v]||0)+1;
-          }
-        });
-      });
-      const flagLabels = Object.keys(flagCounts);
-      const flagValues = flagLabels.map(k => flagCounts[k]);
-      makeBar('chartFlags', flagLabels.length?flagLabels:['No Flags'], flagLabels.length?flagValues:[0], 'Count', '#DC2626');
-
-      // 5) Scatter predicted vs actual
-      // One dataset per stage for nice colors
-      const scatterDatasets = stages.map((s, idx) => ({
-        label: labelStage(s),
-        data: byStage[s].map(r => ({x:r.actual, y:r.pred})),
-        pointRadius: 3 + (idx%2),
-        backgroundColor: pickColor(idx),
-      }));
-      makeScatter('chartScatter', scatterDatasets);
-
-    })();
-
-    // ---------- UTILS ----------
-    function num(v){ const x = Number(String(v).replace(/,/g,'')); return isFinite(x) ? x : NaN; }
-    function avg(arr){ const vals = arr.filter(x=>isFinite(x)); return vals.length? vals.reduce((a,b)=>a+b,0)/vals.length : NaN; }
-    function setText(id, t){ const el = document.getElementById(id); if(el) el.textContent=t; }
-    function groupBy(arr, key){ return arr.reduce((acc,cur)=>{ const k=cur[key]; (acc[k]=acc[k]||[]).push(cur); return acc; },{}); }
-    function labelStage(s){ return s.charAt(0) + s.slice(1).toLowerCase(); }
-    function pickColor(i){
-      const palette = ['#0B1F52','#2BAF6A','#F4B000','#10B981','#6366F1','#EF4444','#14B8A6','#A855F7'];
-      return palette[i % palette.length];
-    }
-
-    function makeBar(canvasId, labels, values, yLabel, color){
-      const ctx = document.getElementById(canvasId);
-      if(!ctx) return;
-      new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets: [{ data: values, backgroundColor: color }]},
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          scales: { x:{ grid:{display:false}}, y:{ grid:{ color:'#CFD3DA' }, beginAtZero:true }},
-          plugins: { tooltip:{ callbacks:{ label:(c)=> `${c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:2})}${yLabel.includes('%')?'%':''}` } } }
-        }
-      });
-    }
-
-    function makeDonut(canvasId, compliancePct){
-      const ctx = document.getElementById(canvasId);
-      if(!ctx) return;
-      new Chart(ctx,{
-        type:'doughnut',
-        data:{
-          labels:['Compliant','Not Compliant'],
-          datasets:[{
-            data:[compliancePct, 100 - compliancePct],
-            backgroundColor:['#2BAF6A','#CFD3DA'],
-            borderWidth:0,
-            cutout:'70%'
-          }]
-        },
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{enabled:false} }},
-        plugins: [{
-          id:'centerLabel',
-          afterDraw(chart, args, opts){
-            const {ctx, chartArea:{width, height}} = chart;
-            ctx.save();
-            ctx.font = '600 18px Inter';
-            ctx.fillStyle = '#0B1F52';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(`${compliancePct.toFixed(1)}%`, chart.getDatasetMeta(0).data[0].x, chart.getDatasetMeta(0).data[0].y - 6);
-            ctx.font = '400 11px Inter';
-            ctx.fillStyle = '#64748B';
-            ctx.fillText('Compliant', chart.getDatasetMeta(0).data[0].x, chart.getDatasetMeta(0).data[0].y + 12);
-            ctx.restore();
-          }
-        }]
-      });
-    }
-
-    function makeScatter(canvasId, datasets){
-      const ctx = document.getElementById(canvasId);
-      if(!ctx) return;
-      const all = datasets.flatMap(d => d.data);
-      const minVal = Math.min(...all.map(p=>Math.min(p.x,p.y)));
-      const maxVal = Math.max(...all.map(p=>Math.max(p.x,p.y)));
-      new Chart(ctx, {
-        type:'scatter',
-        data:{ datasets },
-        options:{
-          responsive:true, maintainAspectRatio:false,
-          scales:{
-            x:{ grid:{ color:'#CFD3DA'}, title:{ display:true, text:'Actual (ft²)'} , min:minVal, max:maxVal },
-            y:{ grid:{ color:'#CFD3DA'}, title:{ display:true, text:'Predicted (ft²)'} , min:minVal, max:maxVal }
-          },
-          plugins:{ legend:{ display:true, position:'bottom'} },
-          elements:{ point:{ borderWidth:0 } }
-        },
-        plugins:[{
-          id:'diag',
-          afterDraw(chart){
-            const {ctx, chartArea} = chart;
-            const x = chart.scales.x, y = chart.scales.y;
-            ctx.save();
-            ctx.strokeStyle = '#9CA3AF';
-            ctx.setLineDash([5,5]);
-            ctx.beginPath();
-            ctx.moveTo(x.getPixelForValue(x.min), y.getPixelForValue(y.min));
-            ctx.lineTo(x.getPixelForValue(x.max), y.getPixelForValue(y.max));
-            ctx.stroke();
-            ctx.restore();
-          }
-        }]
-      });
-    }
-  </script>
-</body>
-</html>
+/* ========= compute & chart update ========= */
+function autoDeltas(){
+  const r=['air_cooling','moisture','air_flow','max_temp','humidity'];
+  r.forEach(x=>{
+    const rv=Number($('wf_recipe_'+x).value),kv=Number($('wf_kiln_'+x).value);
+    if(!isNaN(rv)&&!isNaN(kv))$('wf_delta_'+x).value=(kv-rv).toFixed(2);
+  });
+}
+function payload(){
+  autoDeltas();
+  const p={};
+  document.querySelectorAll('#panel-whatif input,#panel-whatif select').forEach(el=>{
+    let v=el.value;
+    if(el.type==='number'||el.id.startsWith('wf_')){v=Number(v);if(isNaN(v))v=null;}
+    p[el.id.replace('wf_','')]=v;
+  });
+  return p;
+}
+async function runWF(){
+  $('wfStatus').textContent='Predicting…';
+  const pl=payload();
+  if(!pl.vol_start){$('wfHint').textContent='Enter a start volume';return;}
+  let res;
+  if(modelLoaded){
+    const f=pyodide.globals.get('predict');
+    const pyIn=pyodide.toPy(pl);
+    const pyOut=f(pyIn);
+    res=pyOut.toJs();pyIn.destroy();pyOut.destroy();f.destroy();
+  }else{ // fallback
+    const s=pl.vol_start,v=[s,s*0.98,s*0.97,s*0.95,s*0.89];
+    res={stages:{start:{amount:v[0]},press:{amount:v[1]},glaze:{amount:v[2]},kiln:{amount:v[3]},sort:{amount:v[4]}}};
+  }
+  const st=res.stages;
+  const vols=[st.start.amount,st.press.amount,st.glaze.amount,st.kiln.amount,st.sort.amount];
+  const mins=[st.start.min_required,st.press.min_required,st.glaze.min_required,st.kiln.min_required,st.sort.min_required];
+  lossChart.data.datasets[0].data=vols;
+  lossChart.data.datasets[1].data=mins;
+  lossChart.update();
+  const y=(vols[4]/vols[0])*100;
+  $('wfHint').textContent=`Final yield ≈ ${pct(y)} (${fmt(vols[4])} ft² of ${fmt(vols[0])})`;
+  $('wfStatus').textContent='Done ✅';
+}
+$('wfRun').addEventListener('click',runWF);
+</script>
