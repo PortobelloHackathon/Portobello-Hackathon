@@ -27,6 +27,9 @@
       }
     }
   </script>
+  <!-- Timestamp modal will be injected into body to ensure elements exist -->
+
+  
 </head>
 
 <body class="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
@@ -34,8 +37,7 @@
   <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
     <div class="mx-auto max-w-7xl px-6 py-5">
       <div class="flex items-baseline gap-2">
-        <h1 class="text-4xl font-extrabold tracking-tight text-pbBlue">Portobello</h1>
-        <span class="text-xl font-semibold text-pbBlue">America</span>
+  <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-16 object-contain" />
       </div>
     </div>
   </header>
@@ -44,10 +46,10 @@
     <!-- SIDEBAR -->
     <aside class="w-48 bg-slate-50 border-r shadow-lg">
       <nav class="mt-6 flex flex-col" aria-label="Primary">
-        <a href="#" class="flex items-center px-5 py-3 bg-[#0b1f52] text-white font-semibold rounded-r-full mb-2 shadow-sm">
+        <a href="index.html" onclick="location.href='index.html'" class="flex items-center px-5 py-3 bg-[#0b1f52] text-white font-semibold rounded-r-full mb-2 shadow-sm">
           <span>Analytics</span>
         </a>
-        <a href="#" class="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-200 rounded-r-full mb-2 transition">
+        <a href="inventory.html" onclick="location.href='inventory.html'" class="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-200 rounded-r-full mb-2 transition">
           <span>Inventory</span>
         </a>
       </nav>
@@ -61,46 +63,18 @@
         <!-- GRID -->
         <div class="mt-6 grid grid-cols-12 gap-4">
           <!-- Line chart -->
-          <section class="col-span-12 lg:col-span-8 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[22rem]">
+          <section class="col-span-12 lg:col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[22rem]">
             <div class="flex items-center justify-between mb-2">
               <h3 class="text-lg font-semibold text-slate-800">Material Loss Per Stage</h3>
-              <span class="text-sm text-slate-500">kg</span>
+              <div class="flex items-center gap-3">
+                <span class="text-sm text-slate-500">kg</span>
+                <button id="chooseAnalyticsTs" class="px-2 py-1 bg-slate-100 rounded border text-sm">Choose timestamp</button>
+              </div>
             </div>
             <canvas id="lossLineChart" class="w-full h-full"></canvas>
           </section>
 
-          <!-- KPI donuts -->
-          <section class="col-span-12 lg:col-span-4 grid grid-cols-1 gap-3">
-            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-3">
-              <h3 class="text-sm font-medium text-slate-600 mb-1">Yield</h3>
-              <div class="flex items-center gap-3">
-                <div class="shrink-0 w-16 h-16">
-                  <canvas id="kpiDonut1" class="!w-full !h-full"></canvas>
-                </div>
-                <div class="text-slate-600 text-xs">Good parts / total</div>
-              </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-3">
-              <h3 class="text-sm font-medium text-slate-600 mb-1">Scrap Rate</h3>
-              <div class="flex items-center gap-3">
-                <div class="shrink-0 w-16 h-16">
-                  <canvas id="kpiDonut2" class="!w-full !h-full"></canvas>
-                </div>
-                <div class="text-slate-600 text-xs">Scrap / input</div>
-              </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-white shadow-sm p-3">
-              <h3 class="text-sm font-medium text-slate-600 mb-1">On-Time</h3>
-              <div class="flex items-center gap-3">
-                <div class="shrink-0 w-16 h-16">
-                  <canvas id="kpiDonut3" class="!w-full !h-full"></canvas>
-                </div>
-                <div class="text-slate-600 text-xs">Orders on schedule</div>
-              </div>
-            </div>
-          </section>
+          <!-- KPI donuts removed per request -->
 
           <!-- Loss Breakdown -->
           <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-3 md:p-4 h-[16rem] overflow-hidden">
@@ -110,15 +84,20 @@
             </div>
 
             <div class="flex items-center justify-center gap-6 md:gap-10">
-              <ul class="space-y-1.5 text-sm text-slate-700">
-                <li class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#1F77B4"></span> Cutting</li>
-                <li class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#FF7F0E"></span> Assembly</li>
-                <li class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#2CA02C"></span> QC</li>
-                <li class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#9467BD"></span> Packaging</li>
-              </ul>
+              <div id="stageLegend" class="space-y-1.5 text-sm text-slate-700">
+                <div class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#1F77B4"></span> Start</div>
+                <div class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#FF7F0E"></span> Press</div>
+                <div class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#2CA02C"></span> Glaze</div>
+                <div class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#9467BD"></span> Kiln</div>
+                <div class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#D62728"></span> Sort</div>
+              </div>
+              <div id="multiRingPercent" class="mt-2 text-sm text-slate-600"></div>
 
               <div class="w-[190px] h-[190px]">
                 <canvas id="multiRingDonut" class="!w-full !h-full"></canvas>
+              </div>
+              <div class="ml-6 w-48">
+                <canvas id="stepPctChart" class="!w-full h-36"></canvas>
               </div>
             </div>
           </section>
@@ -129,8 +108,31 @@
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Timestamp modal -->
+  <div id="analyticsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40">
+    <div class="bg-white rounded p-4 w-96">
+      <h3 class="font-semibold mb-2">Select timestamp for analytics</h3>
+      <select id="analyticsSelect" class="w-full border p-2 mb-3"></select>
+      <div class="flex justify-end gap-2">
+        <button id="analyticsCancel" class="px-3 py-1 rounded border">Cancel</button>
+        <button id="analyticsView" class="px-3 py-1 bg-slate-700 text-white rounded">View</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty stage modal (opens when clicking chart points for Press/Glaze/Kiln/Sort) -->
+  <div id="stageModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40">
+    <div class="bg-white rounded p-4 w-96">
+      <div class="flex justify-between items-center mb-2">
+        <h3 id="stageModalTitle" class="font-semibold">&nbsp;</h3>
+        <button id="stageModalClose" class="px-2 py-1 text-sm rounded border">Close</button>
+      </div>
+      <div id="stageModalBody" class="min-h-[6rem]"></div>
+    </div>
+  </div>
 
   <script>
+    document.addEventListener('DOMContentLoaded', () => {
     // ---- Brand + status colors ----
     const PB_BLUE     = '#0B1F52';
     const PB_GRAY_D   = '#434A52';
@@ -147,13 +149,10 @@
     Chart.defaults.color = PB_GRAY_D;
     Chart.defaults.plugins.legend.display = false;
 
-    // Canvases
-    const lineCtx  = document.getElementById('lossLineChart');
-    const kpi1Ctx  = document.getElementById('kpiDonut1');
-    const kpi2Ctx  = document.getElementById('kpiDonut2');
-    const kpi3Ctx  = document.getElementById('kpiDonut3');
-    const multiCtx = document.getElementById('multiRingDonut');
-    const dashLoading = document.getElementById('dashLoading');
+  // Canvases
+  const lineCtx  = document.getElementById('lossLineChart');
+  const multiCtx = document.getElementById('multiRingDonut');
+  const stepPctCtx = document.getElementById('stepPctChart');
 
     // ----- Line chart (stages + status colors) -----
     let statuses = []; // ['past','current','future',...] length 5
@@ -171,11 +170,11 @@
       data: {
         labels: stageLabels,
         datasets: [{
-          label: 'Loss (kg)',
+          label: 'Value (kg)',
           data: [],
-          segment: { borderColor: (ctx) => colorFor(ctx.p0DataIndex) },
-          backgroundColor: PB_GRAY_L + '55',
-          pointBackgroundColor: (ctx) => colorFor(ctx.dataIndex),
+          borderColor: STATUS_GREEN,
+          backgroundColor: STATUS_GREEN + '33',
+          pointBackgroundColor: STATUS_GREEN,
           pointRadius: 4,
           pointHoverRadius: 6,
           tension: 0.3,
@@ -219,23 +218,66 @@
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
       });
     }
-    const kpiYield  = makeDonut(kpi1Ctx, 0, PB_BLUE);
-    const kpiScrap  = makeDonut(kpi2Ctx, 0, '#94A3B8');
-    const kpiOnTime = makeDonut(kpi3Ctx, 0, STATUS_GREEN);
 
-    // ----- Breakdown donut (single ring, 4 slices) -----
-    const breakdownChart = new Chart(multiCtx, {
+  // KPI donuts removed per request
+
+    // ----- Multi-ring donut with equal ring widths -----
+    // Stage colors: Start, Press, Glaze, Kiln, Sort
+    const STAGE_COLORS = ['#1F77B4','#FF7F0E','#2CA02C','#9467BD','#D62728'];
+    const BG = '#EEF2F6';
+    const THICK = 10;
+    const band = (innerPct) => ({ cutout: `${innerPct}%`, radius: `${innerPct + THICK}%` });
+    const b1 = band(70), b2 = band(80), b3 = band(90);
+
+    const multiRingChart = new Chart(multiCtx, {
       type: 'doughnut',
       data: {
-        labels: ['Cutting','Assembly','QC','Packaging'],
-        datasets: [{
-          data: [0,0,0,0],
-          backgroundColor: [CUT, ASM, QC, PKG],
-          borderWidth: 0,
-          cutout: '55%'
-        }]
+        labels: ['Lost','Remaining'],
+        datasets: [
+          // datasets are [Remaining, Lost] so a full circle = no loss
+          { data: [100,0], backgroundColor: [STAGE_COLORS[0], BG], borderColor: '#fff', borderWidth: 0, cutout: b1.cutout, radius: b1.radius },
+          { data: [100,0], backgroundColor: [STAGE_COLORS[1], BG], borderColor: '#fff', borderWidth: 0, cutout: b2.cutout, radius: b2.radius },
+          { data: [100,0], backgroundColor: [STAGE_COLORS[2], BG], borderColor: '#fff', borderWidth: 0, cutout: b3.cutout, radius: '98%' }
+        ]
       },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true } } }
+      options: { responsive: true, maintainAspectRatio: false, rotation: -90 * (Math.PI/180), plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => { const ds = ctx.dataset; const idx = ctx.dataIndex; const val = ds.data[idx]; if (idx === 0) return `Remaining: ${val}%`; return `Lost: ${val}%`; } } } } }
+    });
+
+    // small horizontal bar chart showing percent remaining per step (Start=100%)
+    const stepPctChart = new Chart(stepPctCtx, {
+      type: 'bar',
+      data: {
+        labels: STAGE_LABELS,
+        datasets: [{ label: 'Remaining %', data: [100,0,0,0,0], backgroundColor: STAGE_COLORS }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { x: { max: 100, ticks: { callback: v => v + '%' } }, y: { grid: { display: false } } },
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x}% remaining (lost ${ (100-ctx.parsed.x).toFixed(1) }%)` } } }
+      }
+    });
+
+    // helper element to display percent on legend hover
+    const multiRingPercentEl = document.getElementById('multiRingPercent');
+  // ensure default ring values exist (one per stage)
+  multiRingChart._ringVals = [0,0,0,0,0];
+    // attach hover listeners to direct legend children for more robust matching
+    const legendItems = document.querySelectorAll('#stageLegend > div');
+    legendItems.forEach((el, idx) => {
+      el.addEventListener('mouseenter', () => {
+        // prefer explicit stored values, otherwise read from chart datasets (datasets are [Remaining, Lost])
+        let pct = 0;
+        if (multiRingChart._ringVals && multiRingChart._ringVals[idx] != null) {
+          pct = multiRingChart._ringVals[idx];
+        } else if (multiRingChart.data && multiRingChart.data.datasets[idx]) {
+          const ds = multiRingChart.data.datasets[idx];
+          pct = ds.data && ds.data[1] != null ? ds.data[1] : 0;
+        }
+        multiRingPercentEl.textContent = `${STAGE_LABELS[idx]} loss: ${Number(pct).toFixed(1)}%`;
+      });
+      el.addEventListener('mouseleave', () => { multiRingPercentEl.textContent = ''; });
     });
 
     // ----- Load from API -----
@@ -255,26 +297,110 @@
         lossLineChart.data.datasets[0].data = stagesRes.lossKg || [];
         lossLineChart.update();
 
-        // kpis
-        const { yieldPct=0, scrapPct=0, onTimePct=0 } = dashRes.kpis || {};
-        kpiYield.data.datasets[0].data = [yieldPct, 100 - yieldPct]; kpiYield.update();
-        kpiScrap.data.datasets[0].data = [scrapPct, 100 - scrapPct]; kpiScrap.update();
-        kpiOnTime.data.datasets[0].data = [onTimePct, 100 - onTimePct]; kpiOnTime.update();
-
-        // breakdown
-        const pct = dashRes.breakdown?.pct || [0,0,0,0];
-        breakdownChart.data.datasets[0].data = pct;
-        breakdownChart.update();
-
-        dashLoading.textContent = '';
-      } catch (e) {
-        console.error(e);
-        dashLoading.textContent = 'failed to load';
-      }
+  // KPI sections removed; skipping kpi updates
     }
 
-    // initial load
-    loadDashboard();
+    // charts start empty until user selects a timestamp
+    // (no demo data loaded by default)
+
+    // --- CSV parsing + modal wiring ---
+    function parseCSV(text){
+      const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim()!=='');
+      if(lines.length===0) return {columns:[],rows:[]};
+      const parseLine = (line)=>{const res=[];let cur='';let inQ=false;for(let i=0;i<line.length;i++){const ch=line[i]; if(ch==='"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ=!inQ; continue;} if(ch===',' && !inQ){ res.push(cur); cur=''; continue; } cur+=ch;} res.push(cur); return res; };
+      const headers = parseLine(lines[0]).map(h=>h.trim());
+      const rows = lines.slice(1).map(l=>{const parts=parseLine(l); const obj={}; for(let i=0;i<headers.length;i++) obj[headers[i]] = parts[i]!==undefined?parts[i].trim():''; return obj; });
+      return {columns: headers, rows};
+    }
+
+    const chooseBtn = document.getElementById('chooseAnalyticsTs');
+    const modalEl = document.getElementById('analyticsModal');
+    const selectEl = document.getElementById('analyticsSelect');
+    const cancelBtn = document.getElementById('analyticsCancel');
+    const viewBtn = document.getElementById('analyticsView');
+
+    let analyticsData = null;
+    fetch('tiles6.csv').then(r=>r.text()).then(txt=>{
+      try{
+        analyticsData = parseCSV(txt);
+        if(analyticsData.columns.includes('datetime')){
+          // dedupe timestamps preserving order
+          const seen = new Set();
+          analyticsData.rows.forEach(r=>{ if(!seen.has(r.datetime)){ seen.add(r.datetime); const o = document.createElement('option'); o.value=r.datetime; o.textContent=r.datetime; selectEl.appendChild(o); } });
+        }
+      }catch(e){ console.warn('CSV parse failed',e); }
+    }).catch(e=>console.warn('fetch failed',e));
+
+    chooseBtn.addEventListener('click', ()=>{ modalEl.classList.remove('hidden'); modalEl.classList.add('flex'); });
+    cancelBtn.addEventListener('click', ()=>{ modalEl.classList.add('hidden'); modalEl.classList.remove('flex'); });
+    viewBtn.addEventListener('click', ()=>{
+      const ts = selectEl.value; if(!analyticsData) return; const rows = analyticsData.rows.filter(r=>r.datetime===ts);
+      if(rows.length===0) return;
+      const aliasGroups = [
+        ['vol_start'],
+        ['vol_press','vol_press_out'],
+        ['vol_glaze','vol_glaze_out'],
+        ['vol_kiln_out'],
+        ['vol_sort_out']
+      ];
+      const cols = aliasGroups.map(group => group.find(g => analyticsData.columns.includes(g))).filter(Boolean);
+      const values = cols.map(c => Number(rows[0][c] || 0));
+      while(values.length<5) values.push(0);
+      const statuses = ['past','past','current','future','future'];
+      updateDashboard({ lossKg: values.slice(0,5), statuses, kpis: { yieldPct: 86, scrapPct: 14, onTimePct: 92 } });
+
+      // Compute cumulative percentages relative to START so losses carry forward
+      // steps: [Start, Press, Glaze, Kiln, Sort]
+      const startVal = values[0] || 0;
+      const cumulativeRemaining = values.map(v => startVal > 0 ? (v / startVal) * 100 : 0);
+      // cumulativeLost per stage = 100 - cumulativeRemaining
+      const cumulativeLost = cumulativeRemaining.map(v => Math.max(0, Math.min(100, 100 - v)));
+      // Use first three cumulative lost values for the three rings (Press, Glaze, Kiln)
+      const ringVals = [ (cumulativeLost[1] || 0), (cumulativeLost[2] || 0), (cumulativeLost[3] || 0) ];
+      // Update datasets: each dataset expects [Remaining, Lost]
+      multiRingChart.data.datasets.forEach((ds, idx) => {
+        const lost = ringVals[idx] || 0;
+        const remaining = Number((100 - lost).toFixed(1));
+        ds.data = [remaining, Number(lost.toFixed(1))];
+        // set lost slice color to the corresponding stage color
+        const color = STAGE_COLORS[idx] || STAGE_COLORS[0];
+        ds.backgroundColor = [color, BG];
+      });
+  // store cumulative lost values for hover display (one per stage)
+  multiRingChart._ringVals = cumulativeLost.map(v => Number(v.toFixed(1)));
+      multiRingChart.update();
+
+      // update stepPctChart to show cumulative percent remaining relative to START
+      // Start = 100%, Press = press/start*100, Glaze = glaze/start*100, etc.
+      const stepPcts = cumulativeRemaining.map(v => Number(v.toFixed(1)));
+      while (stepPcts.length < 5) stepPcts.push(0);
+      stepPctChart.data.datasets[0].data = stepPcts.slice(0,5);
+      stepPctChart.update();
+      modalEl.classList.add('hidden'); modalEl.classList.remove('flex');
+    });
+
+    // stage modal wiring: open blank modal when clicking chart points for indices 1..4 (Press..Sort)
+    const stageModal = document.getElementById('stageModal');
+    const stageModalTitle = document.getElementById('stageModalTitle');
+    const stageModalBody = document.getElementById('stageModalBody');
+    const stageModalClose = document.getElementById('stageModalClose');
+    stageModalClose.addEventListener('click', ()=>{ stageModal.classList.add('hidden'); stageModal.classList.remove('flex'); });
+
+    // Chart.js click handler
+    lineCtx.addEventListener('click', (evt) => {
+      const points = lossLineChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+      if (!points || points.length === 0) return;
+      const pt = points[0];
+      const idx = pt.index;
+      // only open modal for stages Press(1), Glaze(2), Kiln(3), Sort(4)
+      if (idx >=1 && idx <=4) {
+        stageModalTitle.textContent = STAGE_LABELS[idx];
+        stageModalBody.innerHTML = '';
+        stageModal.classList.remove('hidden'); stageModal.classList.add('flex');
+      }
+    });
+
+    }); // end DOMContentLoaded
   </script>
 </body>
 </html>

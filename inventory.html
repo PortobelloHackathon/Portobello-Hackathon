@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inventory — Portobello Dashboard</title>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+      tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
+          colors: {
+            pbBlue: '#0B1F52',       // brand dark blue
+            pbSlate: '#6B7280',      // (kept in case you use it)
+            pbGrayLight: '#CFD3DA',  // brand light gray
+            pbGrayMid:   '#7C8390',  // brand mid gray
+            pbGrayDark:  '#434A52'   // brand dark gray
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800 font-sans">
+  <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
+    <div class="mx-auto max-w-7xl px-6 py-5">
+      <div class="flex items-baseline gap-2">
+  <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-16 object-contain" />
+      </div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <!-- SIDEBAR -->
+    <aside class="w-48 bg-slate-50 border-r shadow-lg">
+      <nav class="mt-6 flex flex-col" aria-label="Primary">
+        <a href="index.html" class="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-200 rounded-r-full mb-2 transition">
+          <span>Analytics</span>
+        </a>
+        <a href="inventory.html" class="flex items-center px-5 py-3 bg-[#0b1f52] text-white font-semibold rounded-r-full mb-2 shadow-sm">
+          <span>Inventory</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="flex-1 overflow-auto">
+      <div class="mx-auto max-w-7xl px-8 py-8">
+        <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Inventory</h2>
+
+        <div class="mt-6 grid grid-cols-12 gap-4">
+          <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
+            <h3 class="text-lg font-semibold text-slate-800 mb-4">Current Stock</h3>
+
+            <div class="flex items-center gap-3 mb-4">
+              <button id="chooseDatetime" class="px-3 py-1 bg-slate-100 rounded border">Choose date/time</button>
+              <div id="dataStatus" class="text-sm text-slate-500"></div>
+            </div>
+
+            <div id="warnMissing" class="mb-3 text-sm text-amber-700"></div>
+
+            <div class="overflow-auto mb-6">
+              <table id="dataTable" class="w-full text-sm table-auto">
+                <thead id="dataTableHead" class="text-slate-600 bg-slate-50"></thead>
+                <tbody id="dataTableBody"></tbody>
+              </table>
+            </div>
+
+            <!-- Volume and loss charts removed per request -->
+            <!-- Modal: select datetime -->
+            <div id="dtModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40">
+              <div class="bg-white rounded p-4 w-96">
+                <h3 class="font-semibold mb-2">Select date/time to view</h3>
+                <select id="datetimeSelect" class="w-full border p-2 mb-3"></select>
+                <div class="flex justify-end gap-2">
+                  <button id="dtCancel" class="px-3 py-1 rounded border">Cancel</button>
+                  <button id="dtView" class="px-3 py-1 bg-slate-700 text-white rounded">View</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Category bar chart removed per request -->
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Optional shared scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    // Simple CSV parser (small inline, supports quoted fields)
+    function parseCSV(text) {
+      const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim()!=="");
+      const parseLine = (line) => {
+        const res = []; let cur=''; let inQ=false;
+        for (let i=0;i<line.length;i++){ const ch=line[i]; if(ch==='"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ=!inQ; continue;} if(ch===',' && !inQ){ res.push(cur); cur=''; continue;} cur+=ch; } res.push(cur); return res; };
+      if(lines.length===0) return {columns:[],rows:[]};
+      const headers = parseLine(lines[0]).map(h=>h.trim());
+      const rows = lines.slice(1).map(l=>{ const parts=parseLine(l); const obj={}; for(let i=0;i<headers.length;i++) obj[headers[i]]=parts[i]!==undefined?parts[i].trim():''; return obj; });
+      return {columns: headers, rows};
+    }
+
+    // Helper: render table from parsed CSV (upload UI removed)
+    const warn = document.getElementById('warnMissing');
+    const tableHead = document.getElementById('dataTableHead');
+    const tableBody = document.getElementById('dataTableBody');
+    const dtModal = document.getElementById('dtModal');
+    const datetimeSelect = document.getElementById('datetimeSelect');
+    const chooseDatetime = document.getElementById('chooseDatetime');
+    const dtCancel = document.getElementById('dtCancel');
+    const dtView = document.getElementById('dtView');
+    const dataStatus = document.getElementById('dataStatus');
+    let csvData = null; // parsed CSV
+
+    function clearTable() {
+      tableHead.innerHTML = '';
+      tableBody.innerHTML = '';
+    }
+
+    function renderTable(columns, rows) {
+      tableHead.innerHTML = '<tr>' + columns.map(c => `<th class="text-left px-3 py-2">${c}</th>`).join('') + '</tr>';
+      tableBody.innerHTML = rows.map(r => '<tr class="border-t">' + columns.map(c => `<td class="px-3 py-2">${r[c] ?? ''}</td>`).join('') + '</tr>').join('');
+    }
+
+    function detectVolumeColumns(columns) {
+      // prefer explicit order: vol_start, vol_press, vol_glaze, vol_kiln_out, vol_sort_out
+      const aliasGroups = [
+        ['vol_start'],
+        ['vol_press','vol_press_out'],
+        ['vol_glaze','vol_glaze_out'],
+        ['vol_kiln_out'],
+        ['vol_sort_out']
+      ];
+      const found = aliasGroups.map(group => group.find(g => columns.includes(g))).filter(Boolean);
+      // also include any other vol_ columns present in header order
+      const others = columns.filter(c => c.startsWith('vol_') && !found.includes(c));
+      return found.concat(others);
+    }
+
+    function toNumber(v) {
+      if (v === null || v === undefined || v === '') return NaN;
+      const n = Number(String(v).replace(/,/g,''));
+      return Number.isFinite(n) ? n : NaN;
+    }
+
+    // Charts removed per request: volume, loss and category charts have been removed from the UI and JS
+
+    function handleParsed(result) {
+      const { columns, rows } = result;
+      if (!columns || columns.length === 0) { warn.textContent = 'No columns found in data'; return; }
+      renderTable(columns, rows);
+
+      const volCols = detectVolumeColumns(columns);
+      if (volCols.length === 0) {
+        warn.textContent = 'No volume columns (vol_*) detected. Expected columns: vol_start, vol_press, vol_glaze, vol_kiln_out, vol_sort_out.';
+        return;
+      }
+      warn.textContent = '';
+
+      // pick a label column heuristically: 'Item', 'item', 'name', 'sku'
+      const labelCandidates = ['Item','item','Name','name','SKU','sku','id','ID'];
+      const labelCol = columns.find(c => labelCandidates.includes(c)) || columns[0];
+
+      // populate datetime select if 'datetime' column exists
+      if (columns.includes('datetime')) {
+        datetimeSelect.innerHTML = '';
+        rows.forEach(r => {
+          const opt = document.createElement('option'); opt.value = r['datetime']; opt.textContent = r['datetime']; datetimeSelect.appendChild(opt);
+        });
+        dataStatus.textContent = `${rows.length} timestamps loaded`;
+      }
+    }
+
+    // load CSV from repo file tiles6.csv
+    fetch('tiles6.csv').then(r=>r.text()).then(txt=>{
+      try{
+        csvData = parseCSV(txt);
+        handleParsed(csvData);
+      }catch(e){ dataStatus.textContent = 'Error loading CSV: '+e.message }
+    }).catch(e=>{ dataStatus.textContent = 'Could not fetch tiles6.csv: '+e.message });
+
+    // modal handlers
+    chooseDatetime.addEventListener('click', ()=>{ dtModal.classList.remove('hidden'); dtModal.classList.add('flex'); });
+    dtCancel.addEventListener('click', ()=>{ dtModal.classList.add('hidden'); dtModal.classList.remove('flex'); });
+    dtView.addEventListener('click', ()=>{
+      const ts = datetimeSelect.value; if(!csvData) return; const rows = csvData.rows.filter(r=>r.datetime===ts);
+      if(rows.length===0){ warn.textContent='No data for selected timestamp'; return; }
+      // render table with only selected rows
+      renderTable(csvData.columns, rows);
+      // Charts removed: just render the table for the selected timestamp
+      dtModal.classList.add('hidden'); dtModal.classList.remove('flex');
+    });
+  </script>
+</body>
+</html>
