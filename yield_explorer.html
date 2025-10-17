@@ -97,16 +97,16 @@
 
         <!-- Charts -->
         <section class="mt-4 grid grid-cols-12 gap-4">
-          <div class="col-span-12 lg:col-span-7 rounded-2xl border bg-white p-4 shadow-sm h-[24rem]">
+          <div class="col-span-12 lg:col-span-7 rounded-2xl border bg-white p-4 shadow-sm h-64 md:h-[24rem]">
             <h3 class="text-lg font-semibold mb-2">Stage Volumes (Median of cohort)</h3>
-            <canvas id="stageChart"></canvas>
+            <canvas id="stageChart" class="w-full h-full"></canvas>
           </div>
-          <div class="col-span-12 lg:col-span-5 rounded-2xl border bg-white p-4 shadow-sm h-[24rem]">
+          <div class="col-span-12 lg:col-span-5 rounded-2xl border bg-white p-4 shadow-sm h-64 md:h-[24rem]">
             <div class="flex items-center justify-between mb-2">
               <h3 class="text-lg font-semibold">Final Yield Distribution</h3>
               <span id="histNote" class="text-xs text-slate-500"></span>
             </div>
-            <canvas id="histChart"></canvas>
+            <canvas id="histChart" class="w-full h-full"></canvas>
           </div>
         </section>
 

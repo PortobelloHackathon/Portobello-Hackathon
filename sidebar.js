@@ -94,10 +94,12 @@
   function ensureSidebar() {
     let aside = document.getElementById(SIDEBAR_ID);
     let nav   = aside ? aside.querySelector(`nav[aria-label="${PRIMARY_LABEL}"]`) : null;
+    // Desktop aside (hidden on small screens)
     if (!aside) {
       aside = document.createElement('aside');
       aside.id = SIDEBAR_ID;
-      aside.className = 'w-56 bg-slate-50 border-r shadow-lg';
+      // hidden on small screens, visible md+
+      aside.className = 'hidden md:block w-56 bg-slate-50 border-r shadow-lg';
       const shell = document.querySelector('header + .flex') || document.querySelector('.flex.flex-1') || document.body;
       shell.insertBefore(aside, shell.firstChild);
     }
@@ -108,9 +110,55 @@
       aside.appendChild(nav);
     } else nav.innerHTML = '';
 
+    // Mobile sidebar (slide-in overlay)
+    let mobileAside = document.getElementById('pb-mobile-sidebar');
+    let mobileNav = mobileAside ? mobileAside.querySelector('nav[aria-label="' + PRIMARY_LABEL + '"]') : null;
+    if (!mobileAside) {
+      mobileAside = document.createElement('aside');
+      mobileAside.id = 'pb-mobile-sidebar';
+      mobileAside.className = 'fixed inset-y-0 left-0 z-50 w-64 bg-white border-r p-4 transform -translate-x-full transition-transform md:hidden';
+      document.body.appendChild(mobileAside);
+    }
+    if (!mobileNav) {
+      mobileNav = document.createElement('nav');
+      mobileNav.className = 'mt-6 flex flex-col';
+      mobileNav.setAttribute('aria-label', PRIMARY_LABEL);
+      mobileAside.appendChild(mobileNav);
+    } else mobileNav.innerHTML = '';
+
+    // Backdrop for mobile
+    let backdrop = document.getElementById('pb-sidebar-backdrop');
+    if (!backdrop) {
+      backdrop = document.createElement('div');
+      backdrop.id = 'pb-sidebar-backdrop';
+      backdrop.className = 'fixed inset-0 bg-black bg-opacity-40 hidden z-40 md:hidden';
+      document.body.appendChild(backdrop);
+    }
+
+    // Add toggle button to header for mobile
+    const hdr = document.querySelector('header');
+    if (hdr && !document.getElementById('pb-sidebar-toggle')) {
+      const btn = document.createElement('button');
+      btn.id = 'pb-sidebar-toggle';
+      btn.className = 'md:hidden ml-3 p-2 rounded bg-slate-100 text-slate-700';
+      btn.setAttribute('aria-label','Open sidebar');
+      btn.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h18"></path></svg>';
+      // place in header start (append to header container)
+      const headerInner = hdr.querySelector('div') || hdr;
+      headerInner.insertBefore(btn, headerInner.firstChild);
+
+      // open/close handlers
+      const openMobile = () => { mobileAside.classList.remove('-translate-x-full'); mobileAside.classList.add('translate-x-0'); backdrop.classList.remove('hidden'); };
+      const closeMobile = () => { mobileAside.classList.add('-translate-x-full'); mobileAside.classList.remove('translate-x-0'); backdrop.classList.add('hidden'); };
+      btn.addEventListener('click', openMobile);
+      backdrop.addEventListener('click', closeMobile);
+      document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeMobile(); });
+    }
+
     builtLinks = [];
     const cur = currentPage();
     NAV.forEach(item => {
+      // Desktop link
       const a = document.createElement('a');
       const isActive = leaf(item.href) === cur;
       a.href = item.href;
@@ -128,7 +176,18 @@
       badge.dataset.role = 'badge';
       a.appendChild(badge);
       nav.appendChild(a);
-      builtLinks.push({ href: item.href, el: a, badge });
+
+      // Mobile link (clone content) inside mobileNav
+      const aM = document.createElement('a');
+      aM.href = item.href;
+      aM.className = 'flex items-center px-4 py-3 rounded mb-2 group text-slate-800';
+      aM.setAttribute('title', item.label);
+      aM.appendChild(createIcon(item.icon));
+      const spanM = document.createElement('span'); spanM.textContent = item.label; aM.appendChild(spanM);
+      const badgeM = document.createElement('span'); badgeM.className = 'ml-auto text-[10px] px-1.5 py-0.5 rounded hidden'; badgeM.dataset.role = 'badge'; aM.appendChild(badgeM);
+      mobileNav.appendChild(aM);
+
+      builtLinks.push({ href: item.href, el: a, badge: badge, elMobile: aM, badgeMobile: badgeM });
     });
   }
 
@@ -137,21 +196,31 @@
     const key = leaf(hrefOrFile);
     const link = builtLinks.find(x => leaf(x.href) === key);
     if (!link) return;
-    if (!count) { link.badge.classList.add('hidden'); link.badge.textContent = ''; return; }
+    if (!count) {
+      if (link.badge) link.badge.classList.add('hidden');
+      if (link.badgeMobile) link.badgeMobile.classList.add('hidden');
+      if (link.badge) link.badge.textContent = '';
+      if (link.badgeMobile) link.badgeMobile.textContent = '';
+      return;
+    }
     const palette = BADGE_COLORS[color] || BADGE_COLORS.default;
-    link.badge.className = `ml-auto text-[10px] px-1.5 py-0.5 rounded ${palette}`;
-    link.badge.textContent = String(count);
-    link.badge.classList.remove('hidden');
+    if (link.badge) { link.badge.className = `ml-auto text-[10px] px-1.5 py-0.5 rounded ${palette}`; link.badge.textContent = String(count); link.badge.classList.remove('hidden'); }
+    if (link.badgeMobile) { link.badgeMobile.className = `ml-auto text-[10px] px-1.5 py-0.5 rounded ${palette}`; link.badgeMobile.textContent = String(count); link.badgeMobile.classList.remove('hidden'); }
   }
 
   function setActive(hrefOrFile) {
     const key = leaf(hrefOrFile);
-    builtLinks.forEach(({ href, el }) => {
+    builtLinks.forEach(({ href, el, elMobile }) => {
       const isActive = leaf(href) === key;
-      el.className =
-        'flex items-center px-5 py-3 rounded-r-full mb-2 transition relative group ' +
-        (isActive ? ACTIVE : INACTIVE);
-      if (isActive) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
+      if (el) {
+        el.className = 'flex items-center px-5 py-3 rounded-r-full mb-2 transition relative group ' + (isActive ? ACTIVE : INACTIVE);
+        if (isActive) el.setAttribute('aria-current', 'page'); else el.removeAttribute('aria-current');
+      }
+      if (elMobile) {
+        elMobile.classList.toggle('text-slate-900', isActive);
+        elMobile.classList.toggle('bg-slate-100', isActive);
+        if (isActive) elMobile.setAttribute('aria-current', 'page'); else elMobile.removeAttribute('aria-current');
+      }
     });
   }
 
