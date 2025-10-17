@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Analytics — What-If | Portobello Dashboard</title>
+  <title>Analytics — What-If | Portobello Dashboard (AI Insights at Bottom)</title>
 
   <!-- Inter font -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,7 +21,10 @@
             pbSlate: '#6B7280',
             pbGrayLight: '#CFD3DA',
             pbGrayMid:   '#7C8390',
-            pbGrayDark:  '#434A52'
+            pbGrayDark:  '#434A52',
+            pbWarn:      '#F59E0B',
+            pbGood:      '#16A34A',
+            pbBad:       '#DC2626'
           }
         }
       }
@@ -39,7 +42,6 @@
   <!-- HEADER -->
   <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
     <div class="relative w-full py-5 pl-3 flex items-center">
-      <!-- Left: Logo with tiny left padding -->
       <a href="/" class="shrink-0">
         <img
           src="assets/images/logo_portobello_america_CORES_pantone_655.png"
@@ -47,15 +49,11 @@
           class="h-16 w-auto object-contain block"
         />
       </a>
-
-      <!-- Center: Title -->
       <h1
         class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none"
       >
         Tile Material Dashboard
       </h1>
-
-      <!-- Right spacer -->
       <div class="ml-auto"></div>
     </div>
   </header>
@@ -72,7 +70,7 @@
           <div id="dataStatus" class="text-sm text-slate-500"></div>
         </div>
 
-        <!-- ===================== WHAT-IF ONLY ===================== -->
+        <!-- ===================== WHAT-IF ===================== -->
         <section id="panel-whatif" class="mt-6">
           <div class="grid grid-cols-12 gap-4">
             <!-- Controls -->
@@ -145,15 +143,34 @@
                 </div>
               </div>
 
-              <div class="mt-5 flex gap-2">
-                <button id="wfRun" class="px-3 py-1.5 rounded bg-pbBlue text-white">Run</button>
-                <button id="wfSens" class="px-3 py-1.5 rounded border">Sensitivity ±5%</button>
-                <button id="wfMC"   class="px-3 py-1.5 rounded border">Monte Carlo (200)</button>
+              <!-- Timing (optional) -->
+              <div class="mt-5 border-t pt-4">
+                <h4 class="text-sm font-semibold mb-2">Timing (optional)</h4>
+                <div class="grid grid-cols-2 gap-3 items-end">
+                  <div class="col-span-2">
+                    <label class="block text-xs mb-1">Start time</label>
+                    <input id="wf_start_dt" type="datetime-local" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Cycle time (min)</label>
+                    <input id="wf_cycle_min" type="number" class="w-full border rounded p-2" value="245" />
+                  </div>
+                  <div>
+                    <div class="text-xs text-slate-500 mb-1">End time</div>
+                    <div id="wf_end_time" class="inline-flex items-center gap-2 text-sm font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+                      —
+                    </div>
+                  </div>
+                </div>
               </div>
-              <p id="wfHint" class="mt-2 text-xs text-slate-500"></p>
+
+              <div class="mt-5 flex items-center gap-2">
+                <button id="wfRun" class="px-3 py-1.5 rounded bg-pbBlue text-white">Predict</button>
+                <span id="wfHint" class="text-xs text-slate-500"></span>
+              </div>
             </div>
 
-            <!-- Charts -->
+            <!-- Chart -->
             <div class="col-span-12 lg:col-span-8 grid grid-cols-12 gap-4">
               <section class="col-span-12 rounded-2xl border bg-white p-4 h-[22rem]">
                 <div class="flex items-center justify-between mb-2">
@@ -165,17 +182,19 @@
                 </div>
                 <canvas id="wfLine"></canvas>
               </section>
-              <section class="col-span-12 md:col-span-6 rounded-2xl border bg-white p-4 h-[16rem]">
-                <h3 class="text-lg font-semibold mb-2">Sensitivity (Δ final vs baseline)</h3>
-                <canvas id="wfTornado"></canvas>
-              </section>
-              <section class="col-span-12 md:col-span-6 rounded-2xl border bg-white p-4 h-[16rem]">
-                <h3 class="text-lg font-semibold mb-2">Final Yield — Monte Carlo</h3>
-                <canvas id="wfHist"></canvas>
-              </section>
             </div>
           </div>
         </section>
+
+        <!-- ===================== AI INSIGHTS (ALWAYS UNDERNEATH) ===================== -->
+        <section id="ai_insights_panel" class="mt-6 rounded-2xl border bg-white p-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-semibold">AI Insights</h3>
+            <span id="ai_status" class="text-[11px] text-slate-500">—</span>
+          </div>
+          <ul id="ai_list" class="mt-3 text-sm space-y-2"></ul>
+        </section>
+
       </div>
     </main>
   </div>
@@ -194,6 +213,18 @@ const toNum = (v) => {
   const n = Number(String(v).replace(/,/g,''));
   return Number.isFinite(n) ? n : NaN;
 };
+const fmt = (n) => Number.isFinite(n) ? n.toLocaleString() : '–';
+const pct = (x) => Number.isFinite(x) ? x.toFixed(2) + '%' : '–';
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function dtLocalInputValue(d){
+  const y=d.getFullYear(), m=pad2(d.getMonth()+1), day=pad2(d.getDate());
+  const hh=pad2(d.getHours()), mm=pad2(d.getMinutes());
+  return `${y}-${m}-${day}T${hh}:${mm}`;
+}
+function humanDT(d){
+  return d.toLocaleString(undefined, { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
 
 /* ===================== WHAT-IF UI BINDINGS ===================== */
 const wf = {
@@ -204,14 +235,36 @@ const wf = {
     h:$('wf_external_humidity'), af:$('wf_air_flow_top_setting'), ac:$('wf_air_cooling'), th:$('wf_thickness_mm'),
     pv:$('wf_pressure_val'), gpv:$('wf_glaze_val'), tv:$('wf_temp_val'), cv:$('wf_cool_val'),
     mv:$('wf_moist_val'), hv:$('wf_hum_val'), afv:$('wf_airflow_val'), acv:$('wf_aircool_val'), thv:$('wf_thick_val'),
-    status:$('wfStatus'), hint:$('wfHint')
+    status:$('wfStatus'), hint:$('wfHint'),
+    startDT: $('wf_start_dt'), cycleMin: $('wf_cycle_min'), endTime:$('wf_end_time')
   },
-  charts:{ line:null, tornado:null, hist:null }
+  charts:{ line:null }
 };
-// show slider values live
+// live slider numbers
 [['p','pv'],['gp','gpv'],['t','tv'],['c','cv'],['m','mv'],['h','hv'],['af','afv'],['ac','acv'],['th','thv']]
 .forEach(([k,label])=>{
   wf.els[k].addEventListener('input',()=>{ wf.els[label].textContent = wf.els[k].value; });
+});
+
+// seed start time with "now"
+(function seedNow(){
+  const now = new Date();
+  wf.els.startDT.value = dtLocalInputValue(now);
+})();
+
+function updateEndTime(){
+  const startStr = wf.els.startDT.value;
+  const mins = toNum(wf.els.cycleMin.value);
+  if(!startStr || !Number.isFinite(mins)){ wf.els.endTime.textContent='—'; return; }
+  const start = new Date(startStr);
+  if (isNaN(start.getTime())) { wf.els.endTime.textContent='—'; return; }
+  const end = new Date(start.getTime() + mins*60000);
+  wf.els.endTime.textContent = humanDT(end);
+}
+// recalc on edits
+['change','input'].forEach(ev=>{
+  wf.els.startDT.addEventListener(ev, updateEndTime);
+  wf.els.cycleMin.addEventListener(ev, updateEndTime);
 });
 
 /* ===================== PYODIDE + MODEL ===================== */
@@ -266,7 +319,6 @@ def predict(payload):
     `;
     await pyodide.runPythonAsync(code);
 
-    // load model from same folder
     const resp = await fetch('ml_model.joblib', { cache: 'no-store' });
     if(!resp.ok) throw new Error('Missing ml_model.joblib');
     const buf = await resp.arrayBuffer();
@@ -283,40 +335,64 @@ def predict(payload):
 }
 initPyodideAndModel();
 
-/* ===================== CHARTS ===================== */
+/* ===================== CHART ===================== */
 function lineChartFactory(ctx, labelA='Scenario'){
   return new Chart(ctx, {
     type:'line',
     data:{
       labels: STAGES,
       datasets: [
-        { label: labelA, data: [], borderWidth:2, tension:0.3, fill:false,
-          borderColor: PB_BLUE, pointBackgroundColor: PB_BLUE, pointRadius:4, pointHoverRadius:6 },
-        { label:'Min', data:[], borderWidth:1.5, borderDash:[6,6], borderColor:'#F4B000', pointRadius:0, tension:0.3, fill:false }
+        {
+          label: labelA,
+          data: [],
+          borderWidth: 2,
+          tension: 0.3,
+          fill: false,
+          borderColor: PB_BLUE,
+          pointBackgroundColor: PB_BLUE,
+          pointBorderColor: PB_BLUE,
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: 'Min',
+          data: [],
+          borderWidth: 1.5,
+          borderDash: [6,6],
+          borderColor: '#F4B000',
+          pointBackgroundColor: '#F4B000',
+          pointBorderColor: '#F4B000',
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          hitRadius: 8,
+          tension: 0.3,
+          fill: false
+        }
       ]
     },
     options:{
-      responsive:true, maintainAspectRatio:false,
+      responsive:true,
+      maintainAspectRatio:false,
       scales:{ x:{grid:{display:false}}, y:{beginAtZero:true, grid:{color:PB_GRAY_L}} },
-      plugins:{ legend:{display:true} }
+      plugins:{
+        legend:{display:true},
+        tooltip:{
+          mode:'index',
+          intersect:false,
+          callbacks:{
+            label: (ctx)=>{
+              const v = ctx.parsed.y;
+              return `${ctx.dataset.label}: ${fmt(v)} ft²`;
+            }
+          }
+        }
+      }
     }
   });
 }
-wf.charts.line    = lineChartFactory($('wfLine').getContext('2d'));
-wf.charts.tornado = new Chart($('wfTornado').getContext('2d'), {
-  type:'bar',
-  data:{ labels:['pressure_psi','glaze_pressure_psi','max_temp'], datasets:[{label:'Δ Final (% of Start)', data:[], backgroundColor:'#7C8390'}] },
-  options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
-    scales:{ x:{ ticks:{ callback:v=> (typeof v==='number'? v.toFixed(0):v) + '%' } } }, plugins:{legend:{display:false}} }
-});
-wf.charts.hist = new Chart($('wfHist').getContext('2d'), {
-  type:'bar',
-  data:{ labels:[], datasets:[{ label:'Count', data:[], backgroundColor:'#94A3B8' }] },
-  options:{ responsive:true, maintainAspectRatio:false,
-    scales:{ x:{ grid:{display:false} }, y:{ beginAtZero:true } }, plugins:{legend:{display:false}} }
-});
+wf.charts.line = lineChartFactory($('wfLine').getContext('2d'));
 
-/* ===================== RUNNERS ===================== */
+/* ===================== PREDICT ===================== */
 function wfPayload(){
   return {
     recipe_id: toNum(wf.els.rid.value),
@@ -337,11 +413,10 @@ function wfPayload(){
 // Heuristic fallback if model isn't available
 function heuristicPredict(payload){
   const start = payload.vol_start;
-  const pr = Math.min(0.996, 0.985 + (payload.pressure_psi-2500)*0.000004); // ~0.985-0.996
+  const pr = Math.min(0.996, 0.985 + (payload.pressure_psi-2500)*0.000004);
   const gr = Math.min(0.996, 0.986 + (payload.glaze_pressure_psi-1200)*0.000006);
   const kilnAdj = (
     (payload.max_temp-1196)*(-0.0015) +
-    (payload.mixture_pct?0:0) +
     (5.2 - payload.cooling_profile)*0.004 +
     (payload.moisture_pct-6.0)*(-0.006) +
     (payload.external_humidity-50)*(-0.0008) +
@@ -357,9 +432,9 @@ function heuristicPredict(payload){
 
   return { stages:{
     start:{status:'actual', amount:Math.round(start), min_required:null, ratio:1},
-    press:{status:'pred',   amount:Math.round(press_amt), min_required:Math.round(start*(pr-0.03)), ratio:pr},
-    glaze:{status:'pred',   amount:Math.round(glaze_amt), min_required:Math.round(press_amt*(gr-0.03)), ratio:gr},
-    kiln :{status:'pred',   amount:Math.round(kiln_amt),  min_required:Math.round(glaze_amt*(kr-0.03)), ratio:kr},
+    press:{status:'pred',   amount:Math.round(press_amt), min_required:Math.round(start*Math.max(0,pr-0.03)), ratio:pr},
+    glaze:{status:'pred',   amount:Math.round(glaze_amt), min_required:Math.round(press_amt*Math.max(0,gr-0.03)), ratio:gr},
+    kiln :{status:'pred',   amount:Math.round(kiln_amt),  min_required:Math.round(glaze_amt*Math.max(0,kr-0.03)), ratio:kr},
     sort :{status:'pred',   amount:Math.round(sort_amt),  min_required:Math.round(kiln_amt*Math.max(0.88, sort_ratio-0.02)), ratio:sort_ratio},
   }};
 }
@@ -391,58 +466,180 @@ async function runWF(){
   wf.charts.line.update();
 
   const yieldPct = (vols[4]/vols[0])*100;
-  wf.els.hint.textContent = `Final yield ≈ ${isFinite(yieldPct)?yieldPct.toFixed(2):'–'}%`;
+  const finalAmt = vols[4];
+  const startAmt = vols[0];
+  wf.els.hint.textContent =
+    `Final yield ≈ ${isFinite(yieldPct) ? yieldPct.toFixed(2) : '–'}% `
+    + `(${Number.isFinite(finalAmt) ? fmt(finalAmt) : '–'} ft² `
+    + `of ${Number.isFinite(startAmt) ? fmt(startAmt) : '–'} ft²)`;
+
+  // update end time chip (if timing inputs provided)
+  updateEndTime();
+
+  // AI Insights (client-only, heuristic + model probing)
+  updateAI(payload, res);
 }
 $('wfRun').addEventListener('click', runWF);
 
-// Sensitivity ±5%
-$('wfSens').addEventListener('click', async ()=>{
-  const base = wfPayload();
-  if(!base.vol_start) return;
-  const baseRes = await runWFOnce(base);
-  const baseY = baseRes.stages.sort.amount;
-
-  const keys = ['pressure_psi','glaze_pressure_psi','max_temp'];
-  const deltas = [];
-  for(const k of keys){
-    const up = {...base}; up[k] = base[k]*1.05;
-    const dn = {...base}; dn[k] = base[k]*0.95;
-    const upY = (await runWFOnce(up)).stages.sort.amount;
-    const dnY = (await runWFOnce(dn)).stages.sort.amount;
-    const worst = Math.max(Math.abs(upY-baseY), Math.abs(dnY-baseY));
-    deltas.push( (worst/ (base.vol_start||1)) * 100 ); // Δ% of start
-  }
-  wf.charts.tornado.data.labels = keys;
-  wf.charts.tornado.data.datasets[0].data = deltas.map(v=>Number(v.toFixed(2)));
-  wf.charts.tornado.update();
-});
-
-// Monte Carlo (200)
-$('wfMC').addEventListener('click', async ()=>{
-  const base = wfPayload();
-  if(!base.vol_start) return;
-  const N=200, vals=[];
-  for(let i=0;i<N;i++){
-    const p = {
-      ...base,
-      pressure_psi: base.pressure_psi * (1 + (Math.random()-0.5)*0.06),   // ±3%
-      glaze_pressure_psi: base.glaze_pressure_psi * (1 + (Math.random()-0.5)*0.06),
-      max_temp: base.max_temp + (Math.random()-0.5)*2
-    };
-    const y = (await runWFOnce(p)).stages.sort.amount / base.vol_start * 100;
-    vals.push(y);
-  }
-  const bins=12, min=Math.min(...vals), max=Math.max(...vals), bw=(max-min)/bins || 1;
-  const counts=Array(bins).fill(0), labels=[];
-  for(let i=0;i<bins;i++){ labels.push((min + i*bw).toFixed(1)); }
-  vals.forEach(v=>{ const idx=Math.min(bins-1, Math.max(0, Math.floor((v-min)/bw))); counts[idx]++; });
-  wf.charts.hist.data.labels = labels;
-  wf.charts.hist.data.datasets[0].data = counts;
-  wf.charts.hist.update();
-});
+// calculate end time once on load
+updateEndTime();
 
 // Initial quick run so the chart isn't empty
 runWF();
+
+/* ===================== AI INSIGHTS ===================== */
+function stageLosses(vols){
+  return [
+    {stage:'Press', loss: (vols[0]??0) - (vols[1]??0), base: vols[0]??0},
+    {stage:'Glaze', loss: (vols[1]??0) - (vols[2]??0), base: vols[1]??0},
+    {stage:'Kiln',  loss: (vols[2]??0) - (vols[3]??0), base: vols[2]??0},
+    {stage:'Sort',  loss: (vols[3]??0) - (vols[4]??0), base: vols[3]??0},
+  ].map(x => ({...x, pctLoss: x.base>0 ? (x.loss/x.base*100) : 0}));
+}
+
+function leverMeta(){
+  const pick = (el)=>({min:Number(el.min),max:Number(el.max),step:Number(el.step||1),val:Number(el.value)});
+  return {
+    pressure_psi:           {...pick(wf.els.p),  label:'Press (psi)'},
+    glaze_pressure_psi:     {...pick(wf.els.gp), label:'Glaze (psi)'},
+    max_temp:               {...pick(wf.els.t),  label:'Max Temp (°C)'},
+    cooling_profile:        {...pick(wf.els.c),  label:'Cooling'},
+    moisture_pct:           {...pick(wf.els.m),  label:'Moisture (%)'},
+    external_humidity:      {...pick(wf.els.h),  label:'Humidity (%)'},
+    air_flow_top_setting:   {...pick(wf.els.af), label:'Air Flow'},
+    air_cooling:            {...pick(wf.els.ac), label:'Air Cooling'},
+    thickness_mm:           {...pick(wf.els.th), label:'Thickness (mm)'},
+  };
+}
+function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+function setSlider(key, value){
+  const map = {
+    pressure_psi: 'p', glaze_pressure_psi:'gp', max_temp:'t',
+    cooling_profile:'c', moisture_pct:'m', external_humidity:'h',
+    air_flow_top_setting:'af', air_cooling:'ac', thickness_mm:'th'
+  };
+  const k = map[key]; if(!k) return;
+  wf.els[k].value = value;
+  const labelMap = { p:'pv', gp:'gpv', t:'tv', c:'cv', m:'mv', h:'hv', af:'afv', ac:'acv', th:'thv' };
+  const l = labelMap[k]; if(l) wf.els[l].textContent = String(value);
+}
+
+async function updateAI(payload, res){
+  const s=res.stages, vols=[s.start.amount,s.press.amount,s.glaze.amount,s.kiln.amount,s.sort.amount], mins=[s.start.min_required,s.press.min_required,s.glaze.min_required,s.kiln.min_required,s.sort.min_required];
+  const start = vols[0]||0, final = vols[4]||0, finalPct = start>0 ? final/start*100 : NaN;
+
+  const aiList = $('ai_list');
+  const aiStatus = $('ai_status');
+  aiList.innerHTML = '';
+  aiStatus.textContent = 'thinking…';
+
+  // 1) Biggest loss stage
+  const losses = stageLosses(vols);
+  const worst = losses.reduce((a,b)=> (b.loss>a.loss?b:a), losses[0]);
+  const li1 = document.createElement('li');
+  li1.innerHTML = `
+    <div class="flex items-start gap-2">
+      <span class="mt-0.5 inline-flex w-2 h-2 rounded-full bg-pbBad"></span>
+      <div>
+        <div class="font-medium">Largest loss at <b>${worst.stage}</b></div>
+        <div class="text-slate-600 text-[13px]">−${fmt(worst.loss)} ft² (${pct(worst.pctLoss)} of prior stage)</div>
+      </div>
+    </div>`;
+  aiList.appendChild(li1);
+
+  // 2) Threshold proximity nudges
+  const near = [];
+  ['press','glaze','kiln','sort'].forEach((k,i)=>{
+    const v = (i===0?vols[1]:vols[i+0]);
+    const m = mins[i+1];
+    if(Number.isFinite(v) && Number.isFinite(m) && start>0){
+      const margin = (v - m) / start * 100;
+      if (margin < 1.0) near.push({stage: STAGES[i+1], margin});
+    }
+  });
+  if(near.length){
+    const li2 = document.createElement('li');
+    const tips = near.map(n=>`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">${n.stage} near min (+${n.margin.toFixed(2)}% of Start)</span>`).join(' ');
+    li2.innerHTML = `
+      <div class="flex items-start gap-2">
+        <span class="mt-0.5 inline-flex w-2 h-2 rounded-full bg-pbWarn"></span>
+        <div>
+          <div class="font-medium">Near threshold</div>
+          <div class="text-slate-600 text-[13px]">${tips}</div>
+        </div>
+      </div>`;
+    aiList.appendChild(li2);
+  }
+
+  // 3) Fast lever probe
+  const meta = leverMeta();
+  const levers = ['pressure_psi','glaze_pressure_psi','max_temp','cooling_profile','moisture_pct'];
+  const baseFinal = final;
+  const baseStart = start;
+  const recs = [];
+  for (const key of levers){
+    const info = meta[key]; if(!info) continue;
+    const step = info.step || 1;
+    const tryVals = [ clamp(info.val + step, info.min, info.max), clamp(info.val - step, info.min, info.max) ];
+    let best = {val: info.val, final: baseFinal};
+    for (const v of tryVals){
+      if (v === info.val) continue;
+      const p = {...payload, [key]: v};
+      const out = await runWFOnce(p);
+      const f = out?.stages?.sort?.amount ?? NaN;
+      if (Number.isFinite(f) && f > best.final) best = {val:v, final:f};
+    }
+    const delta = best.final - baseFinal;
+    if (delta > 0){
+      recs.push({
+        key, label: info.label, from: info.val, to: best.val,
+        deltaAmt: delta,
+        deltaPctPts: baseStart>0 ? ((best.final/baseStart - baseFinal/baseStart) * 100) : 0
+      });
+    }
+  }
+  recs.sort((a,b)=> b.deltaAmt - a.deltaAmt);
+  const top = recs.slice(0,3);
+  if(top.length){
+    const makeRec = (r) => {
+      return `
+        <li class="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-2.5 py-2">
+          <div>
+            <div class="font-medium">${r.label}: <span class="text-slate-600">${r.from}</span> → <b>${r.to}</b></div>
+            <div class="text-[13px] text-slate-600">+${fmt(Math.round(r.deltaAmt))} ft² (${r.deltaPctPts.toFixed(2)} pp)</div>
+          </div>
+          <button data-key="${r.key}" data-val="${r.to}"
+            class="apply-rec px-2 py-1 text-xs rounded bg-pbBlue text-white">Apply</button>
+        </li>`;
+    };
+    const li3 = document.createElement('li');
+    li3.innerHTML = `
+      <div class="flex items-start gap-2 mb-2">
+        <span class="mt-0.5 inline-flex w-2 h-2 rounded-full bg-pbGood"></span>
+        <div class="font-medium">Top quick wins</div>
+      </div>
+      <ul class="space-y-2">${top.map(makeRec).join('')}</ul>
+    `;
+    aiList.appendChild(li3);
+
+    aiList.querySelectorAll('.apply-rec').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const key = btn.getAttribute('data-key');
+        const val = Number(btn.getAttribute('data-val'));
+        setSlider(key, val);
+        runWF();
+      });
+    });
+  }
+
+  // 4) Summary line
+  const li4 = document.createElement('li');
+  li4.className = 'text-[13px] text-slate-600 border-t mt-2 pt-2';
+  li4.innerHTML = `Final yield ≈ <b>${pct(finalPct)}</b> (${fmt(final)} ft² of ${fmt(start)} ft²).`;
+  aiList.appendChild(li4);
+
+  aiStatus.textContent = 'ready';
+}
 </script>
 </body>
 </html>

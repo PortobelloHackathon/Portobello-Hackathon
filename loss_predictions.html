@@ -41,7 +41,6 @@
   <!-- HEADER -->
   <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
     <div class="relative w-full py-5 pl-3 flex items-center">
-      <!-- Left: Logo with tiny left padding -->
       <a href="/" class="shrink-0">
         <img
           src="assets/images/logo_portobello_america_CORES_pantone_655.png"
@@ -49,15 +48,9 @@
           class="h-16 w-auto object-contain block"
         />
       </a>
-
-      <!-- Center: Title (stays perfectly centered regardless of logo width) -->
-      <h1
-        class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none"
-      >
+      <h1 class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none">
         Tile Material Dashboard
       </h1>
-
-      <!-- Right: Spacer for symmetry / future actions -->
       <div class="ml-auto"></div>
     </div>
   </header>
@@ -78,6 +71,8 @@
               <div>
                 <h3 class="text-lg font-semibold text-slate-800">Model & Inputs</h3>
                 <p id="statusText" class="text-sm text-slate-500 mt-1">Booting Python…</p>
+                <!-- NEW: final yield readout -->
+                <p id="finalYield" class="text-sm text-slate-700 mt-1"></p>
                 <details class="mt-2 text-xs text-slate-500">
                   <summary class="cursor-pointer select-none">Debug</summary>
                   <pre id="debugLog" class="mt-2 bg-slate-50 border rounded p-2 whitespace-pre-wrap"></pre>
@@ -101,7 +96,8 @@
               <div class="flex items-center gap-2 text-xs text-slate-500">
                 <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Actual</span>
                 <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#F4B000"></span> Predicted</span>
-                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
+                <!-- UPDATED: threshold legend chip in orange -->
+                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#F97316"></span> Threshold (dashed)</span>
               </div>
             </div>
 
@@ -204,7 +200,8 @@
                 <div class="flex items-center gap-3 text-xs text-slate-500">
                   <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Actual</span>
                   <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#F4B000"></span> Predicted</span>
-                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
+                  <!-- UPDATED legend chip color to orange -->
+                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#F97316"></span> Threshold (dashed)</span>
                 </div>
               </div>
               <canvas id="lossLineChart" class="w-full h-full"></canvas>
@@ -243,12 +240,9 @@
   function setActiveTab(nameRaw){
     const name = (nameRaw || 'predictions').toLowerCase();
     const panel = panels[name] || panels['predictions'];
-
-    // show/hide panels
     Object.values(panels).forEach(p => p && p.classList.add('hidden'));
     if (panel) panel.classList.remove('hidden');
 
-    // button styles
     tabButtons.forEach(btn => {
       const isActive = (btn.dataset.tab || '').toLowerCase() === name;
       btn.className = 'tablink flex items-center px-5 py-3 rounded-r-full mb-2 transition ' +
@@ -263,7 +257,8 @@
 
   // ---------- Colors / Chart defaults ----------
   const PB_GRAY_D = '#434A52', PB_GRAY_L='#CFD3DA';
-  const ACTUAL = '#16A34A', PRED='#F4B000', FUTURE='#0B1F52';
+  const ACTUAL = '#16A34A', PRED='#F4B000', FUTURE='#0B1F52', DANGER='#DC2626';
+  const THRESH = '#F97316'; // NEW: orange threshold line
   const STAGES = ['Start','Press','Glaze','Kiln','Sort'];
 
   Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
@@ -293,11 +288,16 @@
     el.scrollTop = el.scrollHeight;
   }
 
-  // ----- Line chart with tooltips (value + loss vs Start + min) -----
+  // ----- Line chart with tooltips (value + loss vs Start + threshold) -----
   let stageStatus = ['future','future','future','future','future'];
-  let lastVols = [null,null,null,null,null];
-  let lastMins = [null,null,null,null,null];
-  function colorFor(i){ return stageStatus[i]==='actual'?ACTUAL:(stageStatus[i]==='pred'?PRED:FUTURE); }
+  let lastVols    = [null,null,null,null,null];
+  let lastMins    = [null,null,null,null,null];
+  let sortFlagBelowMin = false; // set when Sort < 90% of Kiln
+
+  function colorFor(i){
+    if (i === 4 && sortFlagBelowMin) return DANGER; // Sort point red if flagged
+    return stageStatus[i]==='actual' ? ACTUAL : (stageStatus[i]==='pred' ? PRED : FUTURE);
+  }
   const fmt = n => (n==null||!isFinite(n)) ? '-' : n.toLocaleString();
 
   const lossLineChart = new Chart(document.getElementById('lossLineChart'), {
@@ -305,19 +305,26 @@
     data:{
       labels: STAGES,
       datasets:[
-        { // Volume
+        { // Volume (actual/predicted over stages)
           label:'Volume',
           data:[null,null,null,null,null],
           borderWidth:2, tension:0.3, fill:false,
           segment:{ borderColor:(ctx)=>colorFor(ctx.p0DataIndex) },
           pointBackgroundColor:(ctx)=>colorFor(ctx.dataIndex),
+          pointBorderColor:(ctx)=>colorFor(ctx.dataIndex),
           pointRadius:4, pointHoverRadius:6
         },
-        { // Min Required (dashed)
-          label:'Min Required',
+        { // Threshold (dashed, orange, with hoverable points)
+          label:'Threshold',
           data:[null,null,null,null,null],
           borderWidth:1.5, borderDash:[6,6],
-          borderColor:PRED, pointRadius:0, tension:0.3, fill:false
+          borderColor:THRESH,
+          pointBackgroundColor:THRESH,
+          pointBorderColor:THRESH,
+          pointRadius:3,
+          pointHoverRadius:6,
+          hitRadius:8,
+          tension:0.3, fill:false
         }
       ]
     },
@@ -325,37 +332,54 @@
       responsive:true, maintainAspectRatio:false,
       scales:{
         x:{ grid:{ display:false } },
-        y:{ beginAtZero:true, grid:{ color:PB_GRAY_L } }  // start at 0
+        y:{ beginAtZero:true, grid:{ color:PB_GRAY_L } }
       },
       plugins:{
         tooltip:{
+          mode:'index',
+          intersect:false,
           callbacks:{
             title:(items)=>{
               const i = items[0].dataIndex;
               return `Stage ${i+1} — ${STAGES[i]}`;
             },
             label:(item)=>{
-              const i = item.dataIndex;
-              const val = lastVols[i];
-              const status = stageStatus[i]==='actual' ? 'Actual'
-                            : stageStatus[i]==='pred'   ? 'Predicted'
-                            : 'Future';
-              if(val==null) return 'No data';
-              return `Value: ${fmt(val)} ft² (${status})`;
+              const label = item.dataset.label || 'Value';
+              const val = item.parsed.y;
+              if(val==null || !isFinite(val)) return `${label}: —`;
+              // Add (Actual/Predicted) status only for the Volume series
+              if (item.datasetIndex === 0) {
+                const s = stageStatus[item.dataIndex]==='actual' ? 'Actual'
+                        : stageStatus[item.dataIndex]==='pred'   ? 'Predicted'
+                        : 'Future';
+                return `${label}: ${fmt(val)} ft² (${s})`;
+              }
+              return `${label}: ${fmt(val)} ft²`;
             },
             afterLabel:(item)=>{
               const i = item.dataIndex;
               const start = lastVols[0];
-              const val   = lastVols[i];
+              const val   = item.parsed.y;
               const minV  = lastMins[i];
-              if(start==null || val==null) return '';
-              const loss  = Math.max(0, start - val);
-              const pct   = start>0 ? (loss/start*100) : 0;
-              const lines = [`Loss vs Start: ${fmt(loss)} ft² (${pct.toFixed(2)}%)`];
-              if(minV!=null && stageStatus[i]==='pred'){
-                lines.push(`Min Required: ${fmt(minV)} ft²`);
+              const lines = [];
+              if(item.datasetIndex === 0){
+                if(start!=null && isFinite(start) && val!=null && isFinite(val)){
+                  const loss  = Math.max(0, start - val);
+                  const pct   = start>0 ? (loss/start*100) : 0;
+                  lines.push(`Loss vs Start: ${fmt(loss)} ft² (${pct.toFixed(2)}%)`);
+                }
+                if(minV!=null && isFinite(minV)){
+                  lines.push(`Threshold: ${fmt(minV)} ft²`);
+                }
+                if (i === 4 && lastVols[3] != null) {
+                  const ratio = lastVols[3] > 0 ? (val / lastVols[3]) * 100 : 0;
+                  const badge = sortFlagBelowMin ? ' ⚠️ < 90% MIN' : '';
+                  lines.push(`Sort vs Kiln: ${ratio.toFixed(2)}%${badge}`);
+                }
+              }else if(item.datasetIndex === 1){
+                lines.push('Policy: predicted must be ≥ threshold.');
               }
-              return '\n' + lines.join('\n');
+              return lines.length ? '\n' + lines.join('\n') : '';
             }
           }
         }
@@ -391,6 +415,7 @@
     fields.forEach(f=> setVal(f,''));
     updateChart([null,null,null,null,null],[null,null,null,null,null],['future','future','future','future','future']);
     setBadges();
+    $('finalYield').textContent='';
     $('inputHint').textContent='Enter Start → add actuals or inputs to unlock predictions.';
   }
 
@@ -538,11 +563,21 @@ def predict(payload):
         res["stages"]["kiln"].update(status="pred", amount=_round0(kiln_amt), min_required=_round0(min_req), ratio=kr)
         kiln_base = kiln_amt
 
-    # SORT (rule)
+    # SORT (rule + flag if < 90% of previous stage)
     sr = float(SORT_DEFAULT)
     sort_amt = min(kiln_base * sr, kiln_base)
     min_req = kiln_base * max(SORT_MIN, sr - 0.02)
-    res["stages"]["sort"].update(status="pred", amount=_round0(sort_amt), min_required=_round0(min_req), ratio=sr)
+    actual_ratio_vs_prev = None if kiln_base == 0 else (sort_amt / kiln_base)
+    flag_below_min = bool(kiln_base > 0 and actual_ratio_vs_prev < SORT_MIN)
+    res["stages"]["sort"].update(
+        status="pred",
+        amount=_round0(sort_amt),
+        min_required=_round0(min_req),
+        ratio=sr,
+        min_ratio=SORT_MIN,
+        actual_ratio_vs_prev=actual_ratio_vs_prev,
+        flag_below_min=flag_below_min
+    )
     return res
       `;
       await pyodide.runPythonAsync(pyCode);
@@ -564,7 +599,6 @@ def predict(payload):
       try { pyodide.FS.unlink(MODEL_PATH); } catch(e){}
       pyodide.FS.writeFile(MODEL_PATH, new Uint8Array(buf));
 
-      // FIX: wrap the Python call in a string
       await pyodide.runPythonAsync(`load_model("${MODEL_PATH}")`);
       modelLoaded = true;
       $('statusText').textContent = 'Model loaded ✅ (ml_model.joblib)';
@@ -615,15 +649,31 @@ def predict(payload):
       const s = d[k].status; return s==='blocked'?'future':(s==='actual'?'actual':'pred');
     });
 
+    // Sort flag from Python
+    sortFlagBelowMin = !!d.sort.flag_below_min;
+
     setBadges([statuses[0],statuses[1],statuses[2],statuses[3]]);
     updateChart(vols, mins, statuses);
+
+    // Final yield readout (percent + amount)
+    const start = vols[0], final = vols[4];
+    const pct = (start && final) ? (final/start*100) : NaN;
+    $('finalYield').textContent =
+      (isFinite(pct) && isFinite(final) && isFinite(start))
+      ? `Final yield ≈ ${pct.toFixed(2)}% (${final.toLocaleString()} ft² of ${start.toLocaleString()} ft²)`
+      : '';
 
     const hints=[];
     if(statuses[1]==='future') hints.push('Press needs pressure_psi or actual Press output.');
     if(statuses[2]==='future') hints.push('Glaze needs glaze_pressure_psi (or pressure_psi) or actual Glaze output.');
     if(statuses[3]==='future') hints.push('Kiln benefits from temp/cooling/moisture/humidity/air settings — but will impute if missing.');
+
+    if (sortFlagBelowMin) {
+      $('statusText').textContent = '⚠️ Sort yield below 90% of Kiln — flagged.';
+    } else {
+      $('statusText').textContent = 'Done.';
+    }
     $('inputHint').textContent = hints.join(' ');
-    $('statusText').textContent = 'Done.';
   }
 
   // ---------- Example: random stage, only fill up to that stage ----------
@@ -643,21 +693,17 @@ def predict(payload):
   }
 
   function loadExample(){
-    // random recipe id from dropdown
     const ids = [241,244,245,246,247];
     const rid = ids[Math.floor(Math.random()*ids.length)];
     setVal('recipe_id', rid);
 
-    // random stage: 0 Start only, 1 Up to Press, 2 Up to Glaze, 3 Up to Kiln
     const stageIdx = Math.floor(Math.random()*4);
 
-    // base start volume
     const start = randInt(56000, 90000);
     setVal('vol_start', start);
 
     clearAll();
 
-    // Optional inputs and "actuals" up to the chosen stage
     if(stageIdx >= 1){
       setVal('pressure_psi', Math.round(randFloat(3000, 3200)));
     }
@@ -675,7 +721,6 @@ def predict(payload):
       setVal('thickness_mm', sp.thickness_mm);
     }
 
-    // Realistic "actuals" up to stage (green)
     const press_out = Math.round(start * randFloat(0.987, 0.994));
     const glaze_out = Math.round(press_out * randFloat(0.988, 0.993));
     const kiln_out  = Math.round(glaze_out * randFloat(0.958, 0.969));
