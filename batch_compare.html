@@ -150,7 +150,7 @@ function pickVols(row, columns){
 const DATA={columns:[], rows:[]};
 let cmpChart=null;
 
-fetch('tiles6.csv')
+fetch('tiles.csv')
   .then(r=>r.text())
   .then(txt=>{
     Object.assign(DATA, parseCSV(txt));
@@ -158,7 +158,7 @@ fetch('tiles6.csv')
     initControls();
     initChart();
   })
-  .catch(()=>{$('dataStatus').textContent='Could not load tiles6.csv';});
+  .catch(()=>{$('dataStatus').textContent='Could not load tiles.csv';});
 
 function initControls(){
   const times=uniq(DATA.rows.map(r=>r.datetime)).filter(Boolean).sort();

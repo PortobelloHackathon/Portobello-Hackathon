@@ -182,7 +182,7 @@ function pickVols(row){
 }
 let stageChart, histChart, FILTER={ recipe:'ALL', from:null, to:null }, CACHE={filtered:[], tableRows:[]};
 
-fetch('tiles6.csv')
+fetch('tiles.csv')
   .then(r=>r.text())
   .then(txt=>{
     Object.assign(DATA, parseCSV(txt));
@@ -191,7 +191,7 @@ fetch('tiles6.csv')
     buildCharts();
     renderAll();
   })
-  .catch(()=> $('dataStatus').textContent='Could not load tiles6.csv');
+  .catch(()=> $('dataStatus').textContent='Could not load tiles.csv');
 
 function seedFilters(){
   // recipes

@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Analytics — What-If | Portobello Dashboard (AI Insights at Bottom)</title>
+  <title>Analytics — What-If | Portobello Dashboard</title>
 
   <!-- Inter font -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CDN -->
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -24,7 +24,8 @@
             pbGrayDark:  '#434A52',
             pbWarn:      '#F59E0B',
             pbGood:      '#16A34A',
-            pbBad:       '#DC2626'
+            pbBad:       '#DC2626',
+            pbPred:      '#7E22CE'
           }
         }
       }
@@ -33,8 +34,7 @@
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-
-  <!-- Pyodide (for What-If predictions) -->
+  <!-- Pyodide -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
 </head>
 
@@ -43,15 +43,9 @@
   <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
     <div class="relative w-full py-5 pl-3 flex items-center">
       <a href="/" class="shrink-0">
-        <img
-          src="assets/images/logo_portobello_america_CORES_pantone_655.png"
-          alt="Portobello America"
-          class="h-16 w-auto object-contain block"
-        />
+        <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-16 w-auto object-contain block"/>
       </a>
-      <h1
-        class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none"
-      >
+      <h1 class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none">
         Tile Material Dashboard
       </h1>
       <div class="ml-auto"></div>
@@ -59,7 +53,6 @@
   </header>
 
   <div class="flex flex-1 overflow-hidden">
-    <!-- Global sidebar (injected) -->
     <script src="sidebar.js" defer></script>
 
     <!-- MAIN -->
@@ -70,96 +63,181 @@
           <div id="dataStatus" class="text-sm text-slate-500"></div>
         </div>
 
-        <!-- ===================== WHAT-IF ===================== -->
+        <!-- WHAT-IF -->
         <section id="panel-whatif" class="mt-6">
           <div class="grid grid-cols-12 gap-4">
             <!-- Controls -->
-            <div class="col-span-12 lg:col-span-4 rounded-2xl border bg-white p-4">
+            <div class="col-span-12 xl:col-span-5 rounded-2xl border bg-white p-4">
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-lg font-semibold">What-If Simulator</h3>
                 <span id="wfStatus" class="text-xs text-slate-500">Loading…</span>
               </div>
 
-              <label class="block text-sm mb-1">Recipe ID</label>
-              <select id="wf_recipe_id" class="w-full border rounded p-2 mb-3 bg-white">
-                <option value="241">241</option>
-                <option value="244">244</option>
-                <option value="245" selected>245</option>
-                <option value="246">246</option>
-                <option value="247">247</option>
-              </select>
-
-              <label class="block text-sm">Start Volume</label>
-              <input id="wf_vol_start" type="number" class="w-full border rounded p-2 mb-4" value="80000"/>
-
-              <div class="grid grid-cols-2 gap-3">
-                <div class="col-span-1">
-                  <label class="block text-xs">Press (psi)</label>
-                  <input id="wf_pressure_psi" type="range" min="2500" max="3400" step="10" value="3100" class="w-full"/>
-                  <div class="text-xs text-slate-500"><span id="wf_pressure_val">3100</span> psi</div>
+              <!-- Row: recipe, start, timestamp -->
+              <div class="grid grid-cols-12 gap-3">
+                <div class="col-span-4">
+                  <label class="block text-sm mb-1">Recipe ID</label>
+                  <select id="wf_recipe_id" class="w-full border rounded p-2 bg-white">
+                    <option value="241">241</option>
+                    <option value="244">244</option>
+                    <option value="245" selected>245</option>
+                    <option value="246">246</option>
+                    <option value="247">247</option>
+                  </select>
                 </div>
-                <div class="col-span-1">
-                  <label class="block text-xs">Glaze (psi)</label>
-                  <input id="wf_glaze_pressure_psi" type="range" min="1200" max="1900" step="10" value="1550" class="w-full"/>
-                  <div class="text-xs text-slate-500"><span id="wf_glaze_val">1550</span> psi</div>
+                <div class="col-span-4">
+                  <label class="block text-sm mb-1">Start Volume</label>
+                  <input id="wf_vol_start" type="number" class="w-full border rounded p-2" value="80000"/>
                 </div>
               </div>
 
-              <div class="grid grid-cols-3 gap-3 mt-4">
-                <div>
-                  <label class="block text-xs">Max Temp °C</label>
-                  <input id="wf_max_temp" type="range" min="1188" max="1202" step="1" value="1196" class="w-full"/>
-                  <div class="text-xs text-slate-500"><span id="wf_temp_val">1196</span></div>
+              <!-- Start properties -->
+              <div class="grid grid-cols-12 gap-3 mt-4">
+                <div class="col-span-6">
+                  <label class="block text-sm mb-1">Gloss Type</label>
+                    <select id="wf_gloss_type" class="w-full border rounded p-2 bg-white">
+                      <option value="matte_M1">matte_M1</option>
+                      <option value="polish_P1">polish_P1</option>
+                      <option value="satin_S1">satin_S1</option>
+                      <option value="texture_T1">texture_T1</option>
+                      <option value="satin_S2">satin_S2</option>
+                    </select>
                 </div>
-                <div>
-                  <label class="block text-xs">Cooling</label>
-                  <input id="wf_cooling_profile" type="range" min="4.5" max="5.7" step="0.1" value="5.2" class="w-full"/>
-                  <div class="text-xs text-slate-500"><span id="wf_cool_val">5.2</span></div>
+                <div class="col-span-6">
+                  <label class="block text-sm mb-1">Gloss Amount Target (g/tile)</label>
+                  <input id="wf_gloss_amount_target" type="number" step="0.1" class="w-full border rounded p-2" value="18.0"/>
                 </div>
-                <div>
-                  <label class="block text-xs">Moisture %</label>
-                  <input id="wf_moisture_pct" type="range" min="5.0" max="6.8" step="0.1" value="6.0" class="w-full"/>
-                  <div class="text-xs text-slate-500"><span id="wf_moist_val">6.0</span>%</div>
+              </div>
+
+              <!-- Press controls -->
+              <div class="mt-5">
+                <h4 class="text-sm font-semibold mb-2">Press</h4>
+                <div class="grid grid-cols-12 gap-3">
+                  <div class="col-span-4">
+                    <label class="block text-xs">Target Pressure</label>
+                    <input id="wf_target_pressure" type="range" min="2500" max="3400" step="10" value="3100" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_target_pressure_val">3100</span> psi</div>
+                  </div>
+                  <div class="col-span-4">
+                    <label class="block text-xs">Actual Pressure</label>
+                    <input id="wf_actual_pressure" type="range" min="2500" max="3400" step="10" value="3080" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_actual_pressure_val">3080</span> psi</div>
+                  </div>
+                  <div class="col-span-4">
+                    <label class="block text-xs">Layers Tossed</label>
+                    <input id="wf_layers_tossed" type="number" class="w-full border rounded p-2" value="0"/>
+                  </div>
+                  <div class="col-span-6">
+                    <label class="block text-xs">Desired Thickness (mm)</label>
+                    <input id="wf_desired_thickness" type="range" min="7.8" max="9.2" step="0.1" value="8.5" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_desired_thickness_val">8.5</span> mm</div>
+                  </div>
                 </div>
-                <div>
-                  <label class="block text-xs">Humidity %</label>
-                  <input id="wf_external_humidity" type="range" min="40" max="60" step="1" value="52" class="w-full"/>
-                  <div class="text-xs text-slate-500"><span id="wf_hum_val">52</span>%</div>
+              </div>
+
+              <!-- Glaze recipe setpoints -->
+              <div class="mt-5">
+                <h4 class="text-sm font-semibold mb-2">Glaze (Recipe Setpoints)</h4>
+                <div class="grid grid-cols-12 gap-3">
+                  <div class="col-span-4">
+                    <label class="block text-xs">Air Cooling</label>
+                    <input id="wf_recipe_air_cooling" type="range" min="4.4" max="5.6" step="0.1" value="5.0" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_recipe_air_cooling_val">5.0</span></div>
+                  </div>
+                  <div class="col-span-4">
+                    <label class="block text-xs">Moisture %</label>
+                    <input id="wf_recipe_moisture" type="range" min="5.0" max="6.8" step="0.1" value="6.0" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_recipe_moisture_val">6.0</span>%</div>
+                  </div>
+                  <div class="col-span-4">
+                    <label class="block text-xs">Air Flow</label>
+                    <input id="wf_recipe_air_flow" type="range" min="5.2" max="6.6" step="0.1" value="6.2" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_recipe_air_flow_val">6.2</span></div>
+                  </div>
+                  <div class="col-span-6">
+                    <label class="block text-xs">Max Temp °C</label>
+                    <input id="wf_recipe_max_temp" type="range" min="1188" max="1202" step="1" value="1196" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_recipe_max_temp_val">1196</span></div>
+                  </div>
+                  <div class="col-span-6">
+                    <label class="block text-xs">Humidity %</label>
+                    <input id="wf_recipe_humidity" type="range" min="40" max="60" step="1" value="52" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_recipe_humidity_val">52</span>%</div>
+                  </div>
                 </div>
-                <div>
-                  <label class="block text-xs">Air Flow</label>
-                  <input id="wf_air_flow_top_setting" type="range" min="5.2" max="6.6" step="0.1" value="6.2" class="w-full"/>
-                  <div class="text-xs text-slate-500"><span id="wf_airflow_val">6.2</span></div>
+              </div>
+
+              <!-- Kiln actuals -->
+              <div class="mt-5">
+                <h4 class="text-sm font-semibold mb-2">Kiln (Measured)</h4>
+                <div class="grid grid-cols-12 gap-3">
+                  <div class="col-span-4">
+                    <label class="block text-xs">Air Cooling</label>
+                    <input id="wf_kiln_air_cooling" type="range" min="4.4" max="5.6" step="0.1" value="4.9" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_kiln_air_cooling_val">4.9</span></div>
+                  </div>
+                  <div class="col-span-4">
+                    <label class="block text-xs">Moisture %</label>
+                    <input id="wf_kiln_moisture" type="range" min="5.0" max="6.8" step="0.1" value="6.0" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_kiln_moisture_val">6.0</span>%</div>
+                  </div>
+                  <div class="col-span-4">
+                    <label class="block text-xs">Air Flow</label>
+                    <input id="wf_kiln_air_flow" type="range" min="5.2" max="6.6" step="0.1" value="6.2" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_kiln_air_flow_val">6.2</span></div>
+                  </div>
+                  <div class="col-span-6">
+                    <label class="block text-xs">Max Temp °C</label>
+                    <input id="wf_kiln_max_temp" type="range" min="1188" max="1202" step="1" value="1196" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_kiln_max_temp_val">1196</span></div>
+                  </div>
+                  <div class="col-span-6">
+                    <label class="block text-xs">Humidity %</label>
+                    <input id="wf_kiln_humidity" type="range" min="40" max="60" step="1" value="51" class="w-full"/>
+                    <div class="text-xs text-slate-500"><span id="wf_kiln_humidity_val">51</span>%</div>
+                  </div>
                 </div>
-                <div>
-                  <label class="block text-xs">Air Cooling</label>
-                  <input id="wf_air_cooling" type="range" min="4.4" max="5.6" step="0.1" value="4.9" class="w-full"/>
-                  <div class="text-xs text-slate-500"><span id="wf_aircool_val">4.9</span></div>
+              </div>
+
+              <!-- Deltas (auto computed but editable) -->
+              <div class="mt-5">
+                <h4 class="text-sm font-semibold mb-2">Deltas (Kiln − Recipe)</h4>
+                <div class="grid grid-cols-12 gap-3">
+                  <div class="col-span-4">
+                    <label class="block text-xs">Δ Air Cooling</label>
+                    <input id="wf_delta_air_cooling" type="number" step="0.01" class="w-full border rounded p-2" />
+                  </div>
+                  <div class="col-span-4">
+                    <label class="block text-xs">Δ Moisture</label>
+                    <input id="wf_delta_moisture" type="number" step="0.01" class="w-full border rounded p-2" />
+                  </div>
+                  <div class="col-span-4">
+                    <label class="block text-xs">Δ Air Flow</label>
+                    <input id="wf_delta_air_flow" type="number" step="0.01" class="w-full border rounded p-2" />
+                  </div>
+                  <div class="col-span-6">
+                    <label class="block text-xs">Δ Max Temp</label>
+                    <input id="wf_delta_max_temp" type="number" step="0.01" class="w-full border rounded p-2" />
+                  </div>
+                  <div class="col-span-6">
+                    <label class="block text-xs">Δ Humidity</label>
+                    <input id="wf_delta_humidity" type="number" step="0.01" class="w-full border rounded p-2" />
+                  </div>
                 </div>
-                <div>
-                  <label class="block text-xs">Thickness (mm)</label>
-                  <input id="wf_thickness_mm" type="range" min="7.8" max="9.2" step="0.1" value="8.5" class="w-full"/>
-                  <div class="text-xs text-slate-500"><span id="wf_thick_val">8.5</span> mm</div>
-                </div>
+                <p class="text-[11px] text-slate-500 mt-1">We auto-compute deltas from sliders; you can override here.</p>
               </div>
 
               <!-- Timing (optional) -->
               <div class="mt-5 border-t pt-4">
                 <h4 class="text-sm font-semibold mb-2">Timing (optional)</h4>
-                <div class="grid grid-cols-2 gap-3 items-end">
-                  <div class="col-span-2">
-                    <label class="block text-xs mb-1">Start time</label>
-                    <input id="wf_start_dt" type="datetime-local" class="w-full border rounded p-2" />
-                  </div>
-                  <div>
+                <div class="grid grid-cols-12 gap-3 items-end">
+                  <div class="col-span-6">
                     <label class="block text-xs mb-1">Cycle time (min)</label>
                     <input id="wf_cycle_min" type="number" class="w-full border rounded p-2" value="245" />
                   </div>
-                  <div>
-                    <div class="text-xs text-slate-500 mb-1">End time</div>
-                    <div id="wf_end_time" class="inline-flex items-center gap-2 text-sm font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
-                      —
-                    </div>
+                  <div class="col-span-6">
+                    <div class="text-xs text-slate-500 mb-1">Ends at</div>
+                    <div id="wf_end_time" class="inline-flex items-center gap-2 text-sm font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">—</div>
                   </div>
                 </div>
               </div>
@@ -171,30 +249,35 @@
             </div>
 
             <!-- Chart -->
-            <div class="col-span-12 lg:col-span-8 grid grid-cols-12 gap-4">
-              <section class="col-span-12 rounded-2xl border bg-white p-4 h-[22rem]">
+            <div class="col-span-12 xl:col-span-7 grid grid-cols-12 gap-4">
+              <section class="col-span-12 rounded-2xl border bg-white p-4 h-[24rem]">
                 <div class="flex items-center justify-between mb-2">
                   <h3 class="text-lg font-semibold">Predicted Material Flow</h3>
-                  <div class="flex items-center gap-2 text-xs text-slate-500">
-                    <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#0B1F52"></span> Scenario</span>
-                    <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
+                  <div class="flex items-center gap-4 text-xs text-slate-500">
+                    <span class="inline-flex items-center gap-1">
+                      <span class="w-3 h-3 inline-block rounded-full" style="background:#7E22CE"></span>
+                      Predicted
+                    </span>
+                    <span class="inline-flex items-center gap-1">
+                      <span class="w-3 h-3 inline-block rounded-full border-2 border-orange-400" style="background:#fff"></span>
+                      Min Threshold (dashed)
+                    </span>
                   </div>
                 </div>
                 <canvas id="wfLine"></canvas>
               </section>
+
+              <!-- AI INSIGHTS -->
+              <section id="ai_insights_panel" class="col-span-12 rounded-2xl border bg-white p-4">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-lg font-semibold">AI Insights</h3>
+                  <span id="ai_status" class="text-[11px] text-slate-500">—</span>
+                </div>
+                <ul id="ai_list" class="mt-3 text-sm space-y-2"></ul>
+              </section>
             </div>
           </div>
         </section>
-
-        <!-- ===================== AI INSIGHTS (ALWAYS UNDERNEATH) ===================== -->
-        <section id="ai_insights_panel" class="mt-6 rounded-2xl border bg-white p-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-lg font-semibold">AI Insights</h3>
-            <span id="ai_status" class="text-[11px] text-slate-500">—</span>
-          </div>
-          <ul id="ai_list" class="mt-3 text-sm space-y-2"></ul>
-        </section>
-
       </div>
     </main>
   </div>
@@ -229,139 +312,95 @@ function humanDT(d){
 /* ===================== WHAT-IF UI BINDINGS ===================== */
 const wf = {
   els:{
-    rid: $('wf_recipe_id'), vs:$('wf_vol_start'),
-    p:$('wf_pressure_psi'), gp:$('wf_glaze_pressure_psi'),
-    t:$('wf_max_temp'), c:$('wf_cooling_profile'), m:$('wf_moisture_pct'),
-    h:$('wf_external_humidity'), af:$('wf_air_flow_top_setting'), ac:$('wf_air_cooling'), th:$('wf_thickness_mm'),
-    pv:$('wf_pressure_val'), gpv:$('wf_glaze_val'), tv:$('wf_temp_val'), cv:$('wf_cool_val'),
-    mv:$('wf_moist_val'), hv:$('wf_hum_val'), afv:$('wf_airflow_val'), acv:$('wf_aircool_val'), thv:$('wf_thick_val'),
-    status:$('wfStatus'), hint:$('wfHint'),
-    startDT: $('wf_start_dt'), cycleMin: $('wf_cycle_min'), endTime:$('wf_end_time')
+    // start/meta
+    rid: $('wf_recipe_id'), vs: $('wf_vol_start'),
+    glossType: $('wf_gloss_type'), glossAmt: $('wf_gloss_amount_target'),
+
+    // press
+    tp: $('wf_target_pressure'), ap: $('wf_actual_pressure'),
+    lt: $('wf_layers_tossed'), th: $('wf_desired_thickness'),
+
+    // recipe setpoints
+    r_ac: $('wf_recipe_air_cooling'), r_m: $('wf_recipe_moisture'),
+    r_af: $('wf_recipe_air_flow'),   r_t: $('wf_recipe_max_temp'),
+    r_h:  $('wf_recipe_humidity'),
+
+    // kiln measured
+    k_ac: $('wf_kiln_air_cooling'), k_m: $('wf_kiln_moisture'),
+    k_af: $('wf_kiln_air_flow'),    k_t: $('wf_kiln_max_temp'),
+    k_h:  $('wf_kiln_humidity'),
+
+    // deltas (editable)
+    d_ac: $('wf_delta_air_cooling'), d_m: $('wf_delta_moisture'),
+    d_af: $('wf_delta_air_flow'),    d_t: $('wf_delta_max_temp'),
+    d_h:  $('wf_delta_humidity'),
+
+    // misc
+    status: $('wfStatus'), hint: $('wfHint'),
+    cycleMin: $('wf_cycle_min'), endTime: $('wf_end_time')
   },
   charts:{ line:null }
 };
-// live slider numbers
-[['p','pv'],['gp','gpv'],['t','tv'],['c','cv'],['m','mv'],['h','hv'],['af','afv'],['ac','acv'],['th','thv']]
-.forEach(([k,label])=>{
-  wf.els[k].addEventListener('input',()=>{ wf.els[label].textContent = wf.els[k].value; });
+
+// show live values next to sliders
+[
+  ['wf_target_pressure','wf_target_pressure_val'],
+  ['wf_actual_pressure','wf_actual_pressure_val'],
+  ['wf_desired_thickness','wf_desired_thickness_val'],
+  ['wf_recipe_air_cooling','wf_recipe_air_cooling_val'],
+  ['wf_recipe_moisture','wf_recipe_moisture_val'],
+  ['wf_recipe_air_flow','wf_recipe_air_flow_val'],
+  ['wf_recipe_max_temp','wf_recipe_max_temp_val'],
+  ['wf_recipe_humidity','wf_recipe_humidity_val'],
+  ['wf_kiln_air_cooling','wf_kiln_air_cooling_val'],
+  ['wf_kiln_moisture','wf_kiln_moisture_val'],
+  ['wf_kiln_air_flow','wf_kiln_air_flow_val'],
+  ['wf_kiln_max_temp','wf_kiln_max_temp_val'],
+  ['wf_kiln_humidity','wf_kiln_humidity_val'],
+].forEach(([inId, labelId])=>{
+  const input = $(inId), label = $(labelId);
+  input.addEventListener('input', ()=>{ label.textContent = input.value; autoComputeDeltas(); debouncedRun(); });
 });
 
-// seed start time with "now"
-(function seedNow(){
-  const now = new Date();
-  wf.els.startDT.value = dtLocalInputValue(now);
-})();
 
 function updateEndTime(){
-  const startStr = wf.els.startDT.value;
   const mins = toNum(wf.els.cycleMin.value);
-  if(!startStr || !Number.isFinite(mins)){ wf.els.endTime.textContent='—'; return; }
-  const start = new Date(startStr);
-  if (isNaN(start.getTime())) { wf.els.endTime.textContent='—'; return; }
+  if(!Number.isFinite(mins)){ wf.els.endTime.textContent='—'; return; }
+  const start = new Date(); // current time as start
   const end = new Date(start.getTime() + mins*60000);
   wf.els.endTime.textContent = humanDT(end);
 }
-// recalc on edits
 ['change','input'].forEach(ev=>{
-  wf.els.startDT.addEventListener(ev, updateEndTime);
   wf.els.cycleMin.addEventListener(ev, updateEndTime);
 });
 
-/* ===================== PYODIDE + MODEL ===================== */
-let pyodide=null, modelLoaded=false;
-async function initPyodideAndModel(){
-  try{
-    wf.els.status.textContent='Loading Python…';
-    pyodide = await loadPyodide();
-    try { await pyodide.loadPackage(['numpy','pandas','scikit-learn','joblib']); } catch(e){}
-    const code = `
-import math, numpy as np, pandas as pd, joblib
-bundle=None
-press_model=glaze_model=kiln_model=None
-THRESH_MARGIN=0.03; SORT_MIN=0.90; SORT_DEFAULT=0.90; SORT_MAX=0.92
-
-def load_model(path):
-    global bundle, press_model, glaze_model, kiln_model
-    bundle = joblib.load(path)
-    if isinstance(bundle, dict) and "models" in bundle:
-        press_model = bundle["models"]["press_ratio"]
-        glaze_model = bundle["models"]["glaze_ratio"]
-        kiln_model  = bundle["models"]["kiln_ratio"]
-    else:
-        press_model = bundle["press_ratio"]
-        glaze_model = bundle["glaze_ratio"]
-        kiln_model  = bundle["kiln_ratio"]
-    return True
-
-def predict(payload):
-    d = payload
-    res = { "stages": {
-      "start":{"status":"actual","amount":int(d["vol_start"]), "min_required":None, "ratio":1.0},
-      "press":{"status":"blocked","amount":None,"min_required":None,"ratio":None},
-      "glaze":{"status":"blocked","amount":None,"min_required":None,"ratio":None},
-      "kiln" :{"status":"blocked","amount":None,"min_required":None,"ratio":None},
-      "sort" :{"status":"blocked","amount":None,"min_required":None,"ratio":SORT_DEFAULT}
-    } }
-    start = float(d["vol_start"])
-    df = pd.DataFrame([d])
-    pr = float(press_model.predict(df)[0])
-    gr = float(glaze_model.predict(df)[0])
-    kr = float(kiln_model.predict(df)[0])
-    press_amt = min(start*pr, start)
-    glaze_amt = min(press_amt*gr, press_amt)
-    kiln_amt  = min(glaze_amt*kr, glaze_amt)
-    sort_amt  = kiln_amt * SORT_DEFAULT
-    res["stages"]["press"].update(status="pred", amount=int(round(press_amt)), min_required=int(round(start*max(0,pr-THRESH_MARGIN))), ratio=pr)
-    res["stages"]["glaze"].update(status="pred", amount=int(round(glaze_amt)), min_required=int(round(press_amt*max(0,gr-THRESH_MARGIN))), ratio=gr)
-    res["stages"]["kiln"].update (status="pred", amount=int(round(kiln_amt)),  min_required=int(round(glaze_amt*max(0,kr-THRESH_MARGIN))), ratio=kr)
-    res["stages"]["sort"].update (status="pred", amount=int(round(sort_amt)),  min_required=int(round(kiln_amt*max(SORT_MIN, SORT_DEFAULT-0.02))), ratio=SORT_DEFAULT)
-    return res
-    `;
-    await pyodide.runPythonAsync(code);
-
-    const resp = await fetch('ml_model.joblib', { cache: 'no-store' });
-    if(!resp.ok) throw new Error('Missing ml_model.joblib');
-    const buf = await resp.arrayBuffer();
-    try { pyodide.FS.mkdir('/tmp',{mode:0o777}); } catch(e){}
-    try { pyodide.FS.unlink('/tmp/ml_model.joblib'); } catch(e){}
-    pyodide.FS.writeFile('/tmp/ml_model.joblib', new Uint8Array(buf));
-    await pyodide.runPythonAsync(`load_model("/tmp/ml_model.joblib")`);
-    modelLoaded=true;
-    wf.els.status.textContent='Model loaded ✅';
-  }catch(e){
-    modelLoaded=false;
-    wf.els.status.textContent='Model unavailable (using heuristic mode)';
-  }
-}
-initPyodideAndModel();
-
 /* ===================== CHART ===================== */
-function lineChartFactory(ctx, labelA='Scenario'){
+function lineChartFactory(ctx){
   return new Chart(ctx, {
     type:'line',
     data:{
       labels: STAGES,
       datasets: [
         {
-          label: labelA,
+          label: 'Predicted',
           data: [],
           borderWidth: 2,
           tension: 0.3,
           fill: false,
-          borderColor: PB_BLUE,
-          pointBackgroundColor: PB_BLUE,
-          pointBorderColor: PB_BLUE,
+          borderColor: '#7E22CE',
+          pointBackgroundColor: '#7E22CE',
+          pointBorderColor: '#7E22CE',
           pointRadius: 4,
           pointHoverRadius: 6
         },
         {
-          label: 'Min',
+          label: 'Min Threshold',
           data: [],
           borderWidth: 1.5,
           borderDash: [6,6],
-          borderColor: '#F4B000',
-          pointBackgroundColor: '#F4B000',
-          pointBorderColor: '#F4B000',
+          borderColor: '#F59E0B',
+          pointBackgroundColor: '#F59E0B',
+          pointBorderColor: '#F59E0B',
           pointRadius: 3,
           pointHoverRadius: 6,
           hitRadius: 8,
@@ -377,14 +416,8 @@ function lineChartFactory(ctx, labelA='Scenario'){
       plugins:{
         legend:{display:true},
         tooltip:{
-          mode:'index',
-          intersect:false,
-          callbacks:{
-            label: (ctx)=>{
-              const v = ctx.parsed.y;
-              return `${ctx.dataset.label}: ${fmt(v)} ft²`;
-            }
-          }
+          mode:'index', intersect:false,
+          callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${fmt(ctx.parsed.y)} ft²` }
         }
       }
     }
@@ -392,100 +425,295 @@ function lineChartFactory(ctx, labelA='Scenario'){
 }
 wf.charts.line = lineChartFactory($('wfLine').getContext('2d'));
 
-/* ===================== PREDICT ===================== */
-function wfPayload(){
-  return {
-    recipe_id: toNum(wf.els.rid.value),
-    vol_start: toNum(wf.els.vs.value),
-    pressure_psi: toNum(wf.els.p.value),
-    glaze_pressure_psi: toNum(wf.els.gp.value),
-    max_temp: toNum(wf.els.t.value),
-    cooling_profile: toNum(wf.els.c.value),
-    moisture_pct: toNum(wf.els.m.value),
-    external_humidity: toNum(wf.els.h.value),
-    air_flow_top_setting: toNum(wf.els.af.value),
-    air_cooling: toNum(wf.els.ac.value),
-    thickness_mm: toNum(wf.els.th.value),
-    vol_press_out: null, vol_glaze_out: null, vol_kiln_out: null
-  };
+/* ===================== PYODIDE + MODEL ===================== */
+let pyodide=null, modelLoaded=false;
+async function initPyodideAndModel(){
+  try{
+    wf.els.status.textContent='Loading Python…';
+    pyodide = await loadPyodide();
+    try { await pyodide.loadPackage(['numpy','pandas','scikit-learn','joblib']); } catch(e){}
+    const code = `
+import math, numpy as np, pandas as pd, joblib
+bundle=None
+press_model=glaze_model=kiln_model=None
+stage_features={}
+recipe_setpoints={}
+THRESH_MARGIN=0.03
+SORT_MIN=0.90
+SORT_DEFAULT=0.90
+SORT_MAX=0.92
+
+def load_model(path):
+    global bundle, press_model, glaze_model, kiln_model, stage_features, recipe_setpoints, THRESH_MARGIN, SORT_MIN, SORT_DEFAULT, SORT_MAX
+    bundle = joblib.load(path)
+    if isinstance(bundle, dict) and "models" in bundle:
+        press_model = bundle["models"]["press_ratio"]
+        glaze_model = bundle["models"]["glaze_ratio"]
+        kiln_model  = bundle["models"]["kiln_ratio"]
+        stage_features = bundle.get("stage_features", {})
+        recipe_setpoints = bundle.get("recipe_setpoints", {})
+        cfg = bundle.get("config", {})
+        THRESH_MARGIN = cfg.get("THRESHOLD_MARGIN", THRESH_MARGIN)
+        SORT_MIN      = cfg.get("SORT_MIN", SORT_MIN)
+        SORT_DEFAULT  = cfg.get("SORT_DEFAULT", SORT_DEFAULT)
+        SORT_MAX      = cfg.get("SORT_MAX", SORT_MAX)
+    else:
+        press_model = bundle["press_ratio"]
+        glaze_model = bundle["glaze_ratio"]
+        kiln_model  = bundle["kiln_ratio"]
+        stage_features = {
+            "press_ratio": ["vol_start","pressure_psi","recipe_id"],
+            "glaze_ratio": ["recipe_id","vol_press_out","pressure_psi"],
+            "kiln_ratio":  ["recipe_id","vol_glaze_out","max_temp","cooling_profile","moisture_pct","external_humidity","air_flow_top_setting","air_cooling","thickness_mm"]
+        }
+        recipe_setpoints = {}
+    return True
+
+def _sp_for(rid):
+    try: return recipe_setpoints.get(int(rid), {})
+    except: return {}
+
+def _feature_row(feats, d, suppl=None):
+    row={}
+    src = dict(d)
+    if suppl: src.update(suppl)
+    sp = _sp_for(src.get("recipe_id"))
+    for f in feats:
+        if f in src and src[f] is not None and not (isinstance(src[f], float) and math.isnan(src[f])):
+            row[f] = src[f]; continue
+        if f.startswith("k_set_"):
+            row[f] = sp.get(f, math.nan); continue
+        if f.startswith("delta_"):
+            base = f.replace("delta_","")
+            set_key = "k_set_"+base if not base.startswith("k_set_") else base
+            m = src.get(base, math.nan)
+            s = sp.get(set_key, math.nan)
+            try:
+                row[f] = float(m) - float(s)
+            except Exception:
+                row[f] = math.nan
+            continue
+        row[f] = math.nan
+    return row
+
+def _df_for(stage_key, d, suppl=None):
+    feats = stage_features.get(stage_key, [])
+    return pd.DataFrame([_feature_row(feats, d, suppl)])
+
+def _round0(x):
+    try: return int(round(float(x)))
+    except: return None
+
+def predict(payload):
+    d = payload
+    res = { "stages": {
+      "start":{"status":"pred","amount":_round0(d.get("vol_start")), "min_required":None, "ratio":1.0},
+      "press":{"status":"blocked","amount":None,"min_required":None,"ratio":None},
+      "glaze":{"status":"blocked","amount":None,"min_required":None,"ratio":None},
+      "kiln" :{"status":"blocked","amount":None,"min_required":None,"ratio":None},
+      "sort" :{"status":"blocked","amount":None,"min_required":None,"ratio":SORT_DEFAULT}
+    } }
+
+    if d.get("vol_start") in (None, float("nan")):
+        return res
+    start = float(d["vol_start"])
+
+    # PRESS
+    df_press = _df_for("press_ratio", d)
+    pr = float(press_model.predict(df_press)[0])
+    press_amt = min(start * pr, start)
+    res["stages"]["press"].update(status="pred", amount=_round0(press_amt), min_required=_round0(start*max(0.0, pr-THRESH_MARGIN)), ratio=pr)
+
+    # GLAZE
+    df_glaze = _df_for("glaze_ratio", d, {"vol_press_out": press_amt})
+    gr = float(glaze_model.predict(df_glaze)[0])
+    glaze_amt = min(press_amt * gr, press_amt)
+    res["stages"]["glaze"].update(status="pred", amount=_round0(glaze_amt), min_required=_round0(press_amt*max(0.0, gr-THRESH_MARGIN)), ratio=gr)
+
+    # KILN
+    df_kiln = _df_for("kiln_ratio", d, {"vol_glaze_out": glaze_amt})
+    kr = float(kiln_model.predict(df_kiln)[0])
+    kiln_amt = min(glaze_amt * kr, glaze_amt)
+    res["stages"]["kiln"].update(status="pred", amount=_round0(kiln_amt), min_required=_round0(glaze_amt*max(0.0, kr-THRESH_MARGIN)), ratio=kr)
+
+    # SORT (rule)
+    sr = float(SORT_DEFAULT)
+    sort_amt = min(kiln_amt * sr, kiln_amt)
+    res["stages"]["sort"].update(status="pred", amount=_round0(sort_amt), min_required=_round0(kiln_amt*max(SORT_MIN, sr-0.02)), ratio=sr)
+    return res
+    `;
+    await pyodide.runPythonAsync(code);
+
+    // load model file
+    const resp = await fetch('ml_model.joblib', { cache: 'no-store' });
+    if(!resp.ok) throw new Error('Missing ml_model.joblib');
+    const buf = await resp.arrayBuffer();
+    try { pyodide.FS.mkdir('/tmp',{mode:0o777}); } catch(e){}
+    try { pyodide.FS.unlink('/tmp/ml_model.joblib'); } catch(e){}
+    pyodide.FS.writeFile('/tmp/ml_model.joblib', new Uint8Array(buf));
+    await pyodide.runPythonAsync(`load_model("/tmp/ml_model.joblib")`);
+    modelLoaded=true;
+    wf.els.status.textContent='Model loaded ✅';
+  }catch(e){
+    console.error(e);
+    modelLoaded=false;
+    wf.els.status.textContent='Model unavailable — check ml_model.joblib';
+  }
+}
+initPyodideAndModel();
+
+/* ===================== PAYLOAD ===================== */
+// keep deltas synced when sliders move (kiln - recipe)
+function autoComputeDeltas(){
+  const r_ac = toNum(wf.els.r_ac.value), k_ac = toNum(wf.els.k_ac.value);
+  const r_m  = toNum(wf.els.r_m.value),  k_m  = toNum(wf.els.k_m.value);
+  const r_af = toNum(wf.els.r_af.value), k_af = toNum(wf.els.k_af.value);
+  const r_t  = toNum(wf.els.r_t.value),  k_t  = toNum(wf.els.k_t.value);
+  const r_h  = toNum(wf.els.r_h.value),  k_h  = toNum(wf.els.k_h.value);
+
+  if(!Number.isNaN(k_ac) && !Number.isNaN(r_ac)) wf.els.d_ac.value = (k_ac - r_ac).toFixed(2);
+  if(!Number.isNaN(k_m)  && !Number.isNaN(r_m )) wf.els.d_m.value  = (k_m  - r_m ).toFixed(2);
+  if(!Number.isNaN(k_af) && !Number.isNaN(r_af)) wf.els.d_af.value = (k_af - r_af).toFixed(2);
+  if(!Number.isNaN(k_t)  && !Number.isNaN(r_t )) wf.els.d_t.value  = (k_t  - r_t ).toFixed(2);
+  if(!Number.isNaN(k_h)  && !Number.isNaN(r_h )) wf.els.d_h.value  = (k_h  - r_h ).toFixed(2);
 }
 
-// Heuristic fallback if model isn't available
-function heuristicPredict(payload){
-  const start = payload.vol_start;
-  const pr = Math.min(0.996, 0.985 + (payload.pressure_psi-2500)*0.000004);
-  const gr = Math.min(0.996, 0.986 + (payload.glaze_pressure_psi-1200)*0.000006);
-  const kilnAdj = (
-    (payload.max_temp-1196)*(-0.0015) +
-    (5.2 - payload.cooling_profile)*0.004 +
-    (payload.moisture_pct-6.0)*(-0.006) +
-    (payload.external_humidity-50)*(-0.0008) +
-    (payload.air_flow_top_setting-6.0)*(0.002) +
-    (payload.air_cooling-5.0)*(0.001)
-  );
-  const kr = Math.max(0.94, Math.min(0.975, 0.965 + kilnAdj));
-  const press_amt = Math.min(start*pr, start);
-  const glaze_amt = Math.min(press_amt*gr, press_amt);
-  const kiln_amt  = Math.min(glaze_amt*kr, glaze_amt);
-  const sort_ratio = 0.90;
-  const sort_amt  = kiln_amt * sort_ratio;
+function wfPayload(){
+  // Compute deltas first (unless the user already typed custom values — they remain)
+  autoComputeDeltas();
 
-  return { stages:{
-    start:{status:'actual', amount:Math.round(start), min_required:null, ratio:1},
-    press:{status:'pred',   amount:Math.round(press_amt), min_required:Math.round(start*Math.max(0,pr-0.03)), ratio:pr},
-    glaze:{status:'pred',   amount:Math.round(glaze_amt), min_required:Math.round(press_amt*Math.max(0,gr-0.03)), ratio:gr},
-    kiln :{status:'pred',   amount:Math.round(kiln_amt),  min_required:Math.round(glaze_amt*Math.max(0,kr-0.03)), ratio:kr},
-    sort :{status:'pred',   amount:Math.round(sort_amt),  min_required:Math.round(kiln_amt*Math.max(0.88, sort_ratio-0.02)), ratio:sort_ratio},
-  }};
+  const payload = {
+    // --- new columns you asked for ---
+    recipe_id: toNum(wf.els.rid.value),
+    gloss_type: wf.els.glossType.value,
+    gloss_amount_target_g_per_tile: toNum(wf.els.glossAmt.value),
+
+    vol_start: Number(wf.els.vs.value) || 0,
+    // (no vol_press_out, vol_glaze_out, vol_kiln_out, vol_sort_out from user)
+
+    target_pressure: toNum(wf.els.tp.value),
+    actual_pressure: toNum(wf.els.ap.value),
+    layers_tossed:   toNum(wf.els.lt.value),
+    desired_thickness: toNum(wf.els.th.value),
+
+    recipe_air_cooling: toNum(wf.els.r_ac.value),
+    recipe_moisture:    toNum(wf.els.r_m.value),
+    recipe_air_flow:    toNum(wf.els.r_af.value),
+    recipe_max_temp:    toNum(wf.els.r_t.value),
+    recipe_humidity:    toNum(wf.els.r_h.value),
+
+    kiln_air_cooling: toNum(wf.els.k_ac.value),
+    kiln_moisture:    toNum(wf.els.k_m.value),
+    kiln_air_flow:    toNum(wf.els.k_af.value),
+    kiln_max_temp:    toNum(wf.els.k_t.value),
+    kiln_humidity:    toNum(wf.els.k_h.value),
+
+    delta_air_cooling: toNum(wf.els.d_ac.value),
+    delta_moisture:    toNum(wf.els.d_m.value),
+    delta_air_flow:    toNum(wf.els.d_af.value),
+    delta_max_temp:    toNum(wf.els.d_t.value),
+    delta_humidity:    toNum(wf.els.d_h.value),
+
+    // --- helpful aliases to match many model schemas (doesn't hurt if unused) ---
+    // Common names used in earlier bundles
+    pressure_psi: toNum(wf.els.ap.value),             // alias of actual_pressure
+    thickness_mm: toNum(wf.els.th.value),
+    max_temp:     toNum(wf.els.k_t.value),            // kiln max temp as generic max_temp
+    cooling_profile: toNum(wf.els.k_ac.value),        // alias
+    moisture_pct: toNum(wf.els.k_m.value),
+    external_humidity: toNum(wf.els.k_h.value),
+    air_flow_top_setting: toNum(wf.els.k_af.value),
+    air_cooling: toNum(wf.els.k_ac.value),
+
+    // provide also recipe_* as k_set_* in case model expects setpoints with that prefix
+    k_set_air_cooling: toNum(wf.els.r_ac.value),
+    k_set_moisture:    toNum(wf.els.r_m.value),
+    k_set_air_flow:    toNum(wf.els.r_af.value),
+    k_set_max_temp:    toNum(wf.els.r_t.value),
+    k_set_humidity:    toNum(wf.els.r_h.value),
+  };
+
+  return payload;
+}
+
+/* ===================== PREDICT (MODEL) ===================== */
+function updateChartFromStages(s){
+  const pred = [
+    s.start.amount ?? null,
+    s.press.amount ?? null,
+    s.glaze.amount ?? null,
+    s.kiln.amount ?? null,
+    s.sort.amount ?? null
+  ];
+  const mins = [
+    s.start.min_required ?? null,
+    s.press.min_required ?? null,
+    s.glaze.min_required ?? null,
+    s.kiln.min_required ?? null,
+    s.sort.min_required ?? null
+  ];
+
+  // Only predicted + min series
+  wf.charts.line.data.datasets[0].data = pred; // Predicted
+  wf.charts.line.data.datasets[1].data = mins; // Min
+  wf.charts.line.update();
+
+  const yieldPct = (pred[4]/pred[0])*100;
+  wf.els.hint.textContent = `Final yield ≈ ${isFinite(yieldPct) ? yieldPct.toFixed(2) : '–'}% `
+      + `(${fmt(pred[4])} ft² of ${fmt(pred[0])} ft²)`;
 }
 
 async function runWFOnce(payload){
   if(modelLoaded){
     try{
+      console.log("Running model prediction with start volume:", payload.vol_start);
       const pyPredict = pyodide.globals.get('predict');
       const pyPayload = pyodide.toPy(payload);
       const pyOut = pyPredict(pyPayload);
-      const resObj = pyOut.toJs({ dict_converter: Object.fromEntries });
+      const resObj = pyOut.toJs();
+      const res = JSON.parse(JSON.stringify(resObj)); // full deep copy for Chart.js
       pyPayload.destroy(); pyOut.destroy(); pyPredict.destroy();
-      return resObj;
-    }catch(e){ /* fall back */ }
+      return res;
+    }catch(e){ console.warn('Predict error, check features in model bundle', e); }
   }
-  return heuristicPredict(payload);
+  // soft fallback if model missing — deterministic pass-through
+  const start = payload.vol_start || 0;
+  // Dynamic ratios for fallback
+  const ratios = { press: 0.982, glaze: 0.975, kiln: 0.95, sort: 0.885 };
+  const press = Math.round(start * ratios.press);
+  const glaze = Math.round(press * ratios.glaze);
+  const kiln  = Math.round(glaze * ratios.kiln);
+  const sort  = Math.round(kiln  * ratios.sort);
+  return { stages: {
+    start:{status:'pred', amount:Math.round(start), min_required:null, ratio:1},
+    press:{status:'pred', amount:press, min_required:Math.round(start * (ratios.press - 0.03))},
+    glaze:{status:'pred', amount:glaze, min_required:Math.round(press * (ratios.glaze - 0.03))},
+    kiln :{status:'pred', amount:kiln,  min_required:Math.round(glaze * (ratios.kiln - 0.03))},
+    sort :{status:'pred', amount:sort,  min_required:Math.round(kiln  * (ratios.sort - 0.02))},
+  }};
 }
 
 async function runWF(){
+  wf.els.status.textContent = 'Running prediction…';
+  // Re-read payload every run (especially vol_start)
   const payload = wfPayload();
-  if(!payload.vol_start){ wf.els.hint.textContent='Enter a Start volume.'; return; }
+  if(!payload.vol_start || !Number.isFinite(payload.vol_start)){
+    wf.els.hint.textContent='Enter a Start volume.';
+    wf.els.status.textContent = 'Prediction failed';
+    return;
+  }
+  console.log("Predicting with payload:", payload);
   const res = await runWFOnce(payload);
-  const s = res.stages;
-  const vols=[s.start.amount,s.press.amount,s.glaze.amount,s.kiln.amount,s.sort.amount];
-  const mins=[s.start.min_required,s.press.min_required,s.glaze.min_required,s.kiln.min_required,s.sort.min_required];
-
-  wf.charts.line.data.datasets[0].data = vols;
-  wf.charts.line.data.datasets[1].data = mins;
-  wf.charts.line.update();
-
-  const yieldPct = (vols[4]/vols[0])*100;
-  const finalAmt = vols[4];
-  const startAmt = vols[0];
-  wf.els.hint.textContent =
-    `Final yield ≈ ${isFinite(yieldPct) ? yieldPct.toFixed(2) : '–'}% `
-    + `(${Number.isFinite(finalAmt) ? fmt(finalAmt) : '–'} ft² `
-    + `of ${Number.isFinite(startAmt) ? fmt(startAmt) : '–'} ft²)`;
-
-  // update end time chip (if timing inputs provided)
+  updateChartFromStages(res.stages);
   updateEndTime();
-
-  // AI Insights (client-only, heuristic + model probing)
   updateAI(payload, res);
+  wf.els.status.textContent = 'Prediction done ✅';
 }
 $('wfRun').addEventListener('click', runWF);
 
-// calculate end time once on load
-updateEndTime();
-
-// Initial quick run so the chart isn't empty
-runWF();
+// auto-run on input changes (debounced)
+let runTimer=null;
+function debouncedRun() { /* no auto-predict */ }
 
 /* ===================== AI INSIGHTS ===================== */
 function stageLosses(vols){
@@ -498,40 +726,51 @@ function stageLosses(vols){
 }
 
 function leverMeta(){
-  const pick = (el)=>({min:Number(el.min),max:Number(el.max),step:Number(el.step||1),val:Number(el.value)});
+  const pick = (el)=>({min:Number(el.min||0),max:Number(el.max||0),step:Number(el.step||1),val:Number(el.value||0)});
   return {
-    pressure_psi:           {...pick(wf.els.p),  label:'Press (psi)'},
-    glaze_pressure_psi:     {...pick(wf.els.gp), label:'Glaze (psi)'},
-    max_temp:               {...pick(wf.els.t),  label:'Max Temp (°C)'},
-    cooling_profile:        {...pick(wf.els.c),  label:'Cooling'},
-    moisture_pct:           {...pick(wf.els.m),  label:'Moisture (%)'},
-    external_humidity:      {...pick(wf.els.h),  label:'Humidity (%)'},
-    air_flow_top_setting:   {...pick(wf.els.af), label:'Air Flow'},
-    air_cooling:            {...pick(wf.els.ac), label:'Air Cooling'},
-    thickness_mm:           {...pick(wf.els.th), label:'Thickness (mm)'},
+    target_pressure:         {...pick(wf.els.tp), label:'Target Pressure'},
+    actual_pressure:         {...pick(wf.els.ap), label:'Actual Pressure'},
+    desired_thickness:       {...pick(wf.els.th), label:'Thickness (mm)'},
+    recipe_max_temp:         {...pick(wf.els.r_t),label:'Recipe Max Temp'},
+    kiln_max_temp:           {...pick(wf.els.k_t),label:'Kiln Max Temp'},
+    recipe_air_cooling:      {...pick(wf.els.r_ac),label:'Recipe Air Cooling'},
+    kiln_air_cooling:        {...pick(wf.els.k_ac),label:'Kiln Air Cooling'},
+    recipe_moisture:         {...pick(wf.els.r_m), label:'Recipe Moisture'},
+    kiln_moisture:           {...pick(wf.els.k_m), label:'Kiln Moisture'},
+    recipe_air_flow:         {...pick(wf.els.r_af),label:'Recipe Air Flow'},
+    kiln_air_flow:           {...pick(wf.els.k_af),label:'Kiln Air Flow'},
+    recipe_humidity:         {...pick(wf.els.r_h), label:'Recipe Humidity'},
+    kiln_humidity:           {...pick(wf.els.k_h), label:'Kiln Humidity'},
   };
 }
 function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
-function setSlider(key, value){
+function setSliderByKey(key, value){
   const map = {
-    pressure_psi: 'p', glaze_pressure_psi:'gp', max_temp:'t',
-    cooling_profile:'c', moisture_pct:'m', external_humidity:'h',
-    air_flow_top_setting:'af', air_cooling:'ac', thickness_mm:'th'
+    target_pressure:'wf_target_pressure', actual_pressure:'wf_actual_pressure',
+    desired_thickness:'wf_desired_thickness',
+    recipe_max_temp:'wf_recipe_max_temp', kiln_max_temp:'wf_kiln_max_temp',
+    recipe_air_cooling:'wf_recipe_air_cooling', kiln_air_cooling:'wf_kiln_air_cooling',
+    recipe_moisture:'wf_recipe_moisture', kiln_moisture:'wf_kiln_moisture',
+    recipe_air_flow:'wf_recipe_air_flow', kiln_air_flow:'wf_kiln_air_flow',
+    recipe_humidity:'wf_recipe_humidity', kiln_humidity:'wf_kiln_humidity',
   };
-  const k = map[key]; if(!k) return;
-  wf.els[k].value = value;
-  const labelMap = { p:'pv', gp:'gpv', t:'tv', c:'cv', m:'mv', h:'hv', af:'afv', ac:'acv', th:'thv' };
-  const l = labelMap[k]; if(l) wf.els[l].textContent = String(value);
+  const id = map[key]; if(!id) return;
+  const el = $(id); if(!el) return;
+  const m = Number(el.min||value), M=Number(el.max||value);
+  el.value = clamp(value, m, M);
+  el.dispatchEvent(new Event('input', {bubbles:true}));
 }
 
 async function updateAI(payload, res){
-  const s=res.stages, vols=[s.start.amount,s.press.amount,s.glaze.amount,s.kiln.amount,s.sort.amount], mins=[s.start.min_required,s.press.min_required,s.glaze.min_required,s.kiln.min_required,s.sort.min_required];
+  const s=res.stages;
+  const vols=[s.start.amount,s.press.amount,s.glaze.amount,s.kiln.amount,s.sort.amount];
+  const mins=[s.start.min_required,s.press.min_required,s.glaze.min_required,s.kiln.min_required,s.sort.min_required];
   const start = vols[0]||0, final = vols[4]||0, finalPct = start>0 ? final/start*100 : NaN;
 
   const aiList = $('ai_list');
   const aiStatus = $('ai_status');
   aiList.innerHTML = '';
-  aiStatus.textContent = 'thinking…';
+  aiStatus.textContent = 'analyzing…';
 
   // 1) Biggest loss stage
   const losses = stageLosses(vols);
@@ -547,37 +786,38 @@ async function updateAI(payload, res){
     </div>`;
   aiList.appendChild(li1);
 
-  // 2) Threshold proximity nudges
+  // 2) Near threshold chips
   const near = [];
   ['press','glaze','kiln','sort'].forEach((k,i)=>{
-    const v = (i===0?vols[1]:vols[i+0]);
-    const m = mins[i+1];
+    const idx = i + 1; // skip Start (index 0)
+    const v = vols[idx];
+    const m = mins[idx];
     if(Number.isFinite(v) && Number.isFinite(m) && start>0){
       const margin = (v - m) / start * 100;
-      if (margin < 1.0) near.push({stage: STAGES[i+1], margin});
+      if (margin < 1.0) near.push({stage: STAGES[idx], margin});
     }
   });
   if(near.length){
     const li2 = document.createElement('li');
-    const tips = near.map(n=>`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">${n.stage} near min (+${n.margin.toFixed(2)}% of Start)</span>`).join(' ');
+    const chips = near.map(n=>`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">${n.stage} near min (+${n.margin.toFixed(2)}% of Start)</span>`).join(' ');
     li2.innerHTML = `
       <div class="flex items-start gap-2">
         <span class="mt-0.5 inline-flex w-2 h-2 rounded-full bg-pbWarn"></span>
         <div>
           <div class="font-medium">Near threshold</div>
-          <div class="text-slate-600 text-[13px]">${tips}</div>
+          <div class="text-slate-600 text-[13px]">${chips}</div>
         </div>
       </div>`;
     aiList.appendChild(li2);
   }
 
-  // 3) Fast lever probe
+  // 3) Quick lever probe (one step each direction)
   const meta = leverMeta();
-  const levers = ['pressure_psi','glaze_pressure_psi','max_temp','cooling_profile','moisture_pct'];
+  const candidateKeys = ['actual_pressure','desired_thickness','kiln_max_temp','kiln_air_cooling','kiln_moisture'];
   const baseFinal = final;
   const baseStart = start;
   const recs = [];
-  for (const key of levers){
+  for (const key of candidateKeys){
     const info = meta[key]; if(!info) continue;
     const step = info.step || 1;
     const tryVals = [ clamp(info.val + step, info.min, info.max), clamp(info.val - step, info.min, info.max) ];
@@ -601,24 +841,22 @@ async function updateAI(payload, res){
   recs.sort((a,b)=> b.deltaAmt - a.deltaAmt);
   const top = recs.slice(0,3);
   if(top.length){
-    const makeRec = (r) => {
-      return `
-        <li class="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-2.5 py-2">
-          <div>
-            <div class="font-medium">${r.label}: <span class="text-slate-600">${r.from}</span> → <b>${r.to}</b></div>
-            <div class="text-[13px] text-slate-600">+${fmt(Math.round(r.deltaAmt))} ft² (${r.deltaPctPts.toFixed(2)} pp)</div>
-          </div>
-          <button data-key="${r.key}" data-val="${r.to}"
-            class="apply-rec px-2 py-1 text-xs rounded bg-pbBlue text-white">Apply</button>
-        </li>`;
-    };
     const li3 = document.createElement('li');
     li3.innerHTML = `
       <div class="flex items-start gap-2 mb-2">
         <span class="mt-0.5 inline-flex w-2 h-2 rounded-full bg-pbGood"></span>
         <div class="font-medium">Top quick wins</div>
       </div>
-      <ul class="space-y-2">${top.map(makeRec).join('')}</ul>
+      <ul class="space-y-2">
+        ${top.map(r=>`
+          <li class="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-2.5 py-2">
+            <div>
+              <div class="font-medium">${r.label}: <span class="text-slate-600">${r.from}</span> → <b>${r.to}</b></div>
+              <div class="text-[13px] text-slate-600">+${fmt(Math.round(r.deltaAmt))} ft² (${r.deltaPctPts.toFixed(2)} pp)</div>
+            </div>
+            <button data-key="${r.key}" data-val="${r.to}" class="apply-rec px-2 py-1 text-xs rounded bg-pbBlue text-white">Apply</button>
+          </li>`).join('')}
+      </ul>
     `;
     aiList.appendChild(li3);
 
@@ -626,13 +864,12 @@ async function updateAI(payload, res){
       btn.addEventListener('click', ()=>{
         const key = btn.getAttribute('data-key');
         const val = Number(btn.getAttribute('data-val'));
-        setSlider(key, val);
-        runWF();
+        setSliderByKey(key, val);
       });
     });
   }
 
-  // 4) Summary line
+  // 4) Summary
   const li4 = document.createElement('li');
   li4.className = 'text-[13px] text-slate-600 border-t mt-2 pt-2';
   li4.innerHTML = `Final yield ≈ <b>${pct(finalPct)}</b> (${fmt(final)} ft² of ${fmt(start)} ft²).`;
@@ -640,6 +877,28 @@ async function updateAI(payload, res){
 
   aiStatus.textContent = 'ready';
 }
+
+/* ===================== BOOT ===================== */
+async function initialRun(){
+  // compute deltas immediately
+  autoComputeDeltas();
+  updateEndTime();
+
+  // wait briefly for model; fall back if unavailable
+  let tries = 0;
+  while (!modelLoaded && tries < 30) { // ~9 seconds max
+    wf.els.status.textContent = 'Waiting for model…';
+    await new Promise(r => setTimeout(r, 300));
+    tries++;
+  }
+  if (modelLoaded) {
+    wf.els.status.textContent = 'Ready ✅';
+  } else {
+    wf.els.status.textContent = 'Model unavailable — using fallback';
+  }
+  runWF();
+}
+window.addEventListener('load', initialRun);
 </script>
 </body>
 </html>

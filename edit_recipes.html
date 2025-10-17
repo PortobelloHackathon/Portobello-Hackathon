@@ -75,6 +75,11 @@
                   <th class="text-right px-3 py-2">Air Flow</th>
                   <th class="text-right px-3 py-2">Air Cooling</th>
                   <th class="text-right px-3 py-2">Thickness (mm)</th>
+                  <th class="text-right px-3 py-2">Recipe Air Cooling</th>
+                  <th class="text-right px-3 py-2">Recipe Moisture %</th>
+                  <th class="text-right px-3 py-2">Recipe Air Flow</th>
+                  <th class="text-right px-3 py-2">Recipe Max Temp (°C)</th>
+                  <th class="text-right px-3 py-2">Recipe Humidity %</th>
                   <th class="text-left px-3 py-2">Edit</th>
                 </tr>
               </thead>
@@ -143,6 +148,11 @@ const FIELDS = [
   { key:'air_flow_top_setting', step:0.1, label:'Air Flow',           fmt:v=>isFinite(v)?v.toFixed(1):'' },
   { key:'air_cooling',          step:0.1, label:'Air Cooling',        fmt:v=>isFinite(v)?v.toFixed(1):'' },
   { key:'thickness_mm',         step:0.1, label:'Thickness (mm)',     fmt:v=>isFinite(v)?v.toFixed(1):'' },
+  { key:'recipe_air_cooling',   step:0.1, label:'Recipe Air Cooling', fmt:v=>isFinite(v)?v.toFixed(1):'' },
+  { key:'recipe_moisture',      step:0.1, label:'Recipe Moisture %',  fmt:v=>isFinite(v)?v.toFixed(1):'' },
+  { key:'recipe_air_flow',      step:0.1, label:'Recipe Air Flow',    fmt:v=>isFinite(v)?v.toFixed(1):'' },
+  { key:'recipe_max_temp',      step:1,   label:'Recipe Max Temp (°C)', fmt:v=>isFinite(v)?String(Math.round(v)):'' },
+  { key:'recipe_humidity',      step:1,   label:'Recipe Humidity %',  fmt:v=>isFinite(v)?String(Math.round(v)):'' },
 ];
 
 const STORAGE_KEY='pb_recipe_setpoints_v1';
@@ -152,7 +162,7 @@ let currentValues={};     // editable values (loaded/saved)
 let modalRid=null;        // which recipe is open in modal right now
 
 /* ====== Load CSV ====== */
-fetch('tiles6.csv')
+fetch('tiles.csv')
   .then(r=>r.text())
   .then(txt=>{
     Object.assign(DATA, parseCSV(txt));
@@ -161,7 +171,7 @@ fetch('tiles6.csv')
     loadSavedOrMedians();
     renderTable();
   })
-  .catch(()=>{$('dataStatus').textContent='Could not load tiles6.csv';});
+  .catch(()=>{$('dataStatus').textContent='Could not load tiles.csv';});
 
 function computeMedians(){
   const byR = groupBy(DATA.rows, 'recipe_id');
@@ -205,6 +215,11 @@ function rowHtml(rid, row){
     <td class="px-3 py-2 text-right">${fmt('air_flow_top_setting', row.air_flow_top_setting)}</td>
     <td class="px-3 py-2 text-right">${fmt('air_cooling', row.air_cooling)}</td>
     <td class="px-3 py-2 text-right">${fmt('thickness_mm', row.thickness_mm)}</td>
+    <td class="px-3 py-2 text-right">${fmt('recipe_air_cooling', row.recipe_air_cooling)}</td>
+    <td class="px-3 py-2 text-right">${fmt('recipe_moisture', row.recipe_moisture)}</td>
+    <td class="px-3 py-2 text-right">${fmt('recipe_air_flow', row.recipe_air_flow)}</td>
+    <td class="px-3 py-2 text-right">${fmt('recipe_max_temp', row.recipe_max_temp)}</td>
+    <td class="px-3 py-2 text-right">${fmt('recipe_humidity', row.recipe_humidity)}</td>
     <td class="px-3 py-2">
       <button class="inline-flex items-center gap-1 px-2 py-1 rounded border hover:bg-slate-50"
               data-edit="${rid}" title="Edit">

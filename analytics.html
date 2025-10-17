@@ -317,32 +317,41 @@
       }
     });
 
-    const BG = '#EEF2F6';
-    const THICK = 10;
-    const band = (innerPct) => ({ cutout: `${innerPct}%`, radius: `${innerPct + THICK}%` });
-    const b1 = band(70), b2 = band(80), b3 = band(90);
+// --- Multi-Ring Donut (5 rings for all stages) ---
+const BG = '#EEF2F6';  // background gray
+const THICK = 9;       // ring thickness
+const rings = [55, 65, 75, 85, 95]; // inner cutouts for 5 rings
 
-    const donut = new Chart(multiCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Remaining','Lost'],
-        datasets: [
-          { data: [100,0], backgroundColor: [STAGE_COLORS[1], BG], borderWidth: 0, cutout: b1.cutout, radius: b1.radius },
-          { data: [100,0], backgroundColor: [STAGE_COLORS[2], BG], borderWidth: 0, cutout: b2.cutout, radius: b2.radius },
-          { data: [100,0], backgroundColor: [STAGE_COLORS[3], BG], borderWidth: 0, cutout: b3.cutout, radius: '98%' }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        rotation: -90 * (Math.PI/180),
-        plugins: { legend: { display: false },
-          tooltip: { callbacks: {
-            label: (ctx) => ctx.dataIndex === 0 ? `Remaining: ${ctx.parsed}%` : `Lost: ${ctx.parsed}%`
-          } }
+const donut = new Chart(multiCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['Remaining', 'Lost'],
+    datasets: rings.map((inner, idx) => ({
+      data: [100, 0],
+      backgroundColor: [STAGE_COLORS[idx], BG],
+      borderWidth: 0,
+      cutout: `${inner}%`,
+      radius: `${inner + THICK}%`
+    }))
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    rotation: -90 * (Math.PI / 180),
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) =>
+            ctx.dataIndex === 0
+              ? `Remaining: ${ctx.parsed}%`
+              : `Lost: ${ctx.parsed}%`
         }
       }
-    });
-    donut._ringVals = [0,0,0,0,0];
+    }
+  }
+});
+donut._ringVals = [0, 0, 0, 0, 0];
 
     const bars = new Chart(stepPctCtx, {
       type: 'bar',
@@ -368,7 +377,7 @@
     });
 
     // Load data
-    fetch('tiles6.csv')
+    fetch('tiles.csv')
       .then(r => r.text())
       .then(txt => {
         Object.assign(DATA, parseCSV(txt));
@@ -446,7 +455,18 @@
 
     function updateFromRow(row) {
       currentRow = row || null;
-      tsLabel.textContent = row?.datetime ?? '—';
+
+      function fmtTime(ts) {
+          if (!ts) return '—';
+          const d = new Date(ts);
+          if (isNaN(d)) return ts; // fallback if invalid
+          // Example: Oct 17 2025 9:10 AM
+          return d.toLocaleString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: 'numeric', minute: '2-digit', hour12: true
+          }).replace(',', ', ');
+        }
+      tsLabel.textContent = fmtTime(row?.datetime);
 
       // volumes
       const vols = getVolumes(row);
@@ -461,8 +481,8 @@
       const remaining = calcRemaining(vols);
       const lost = remaining.map(v => Math.max(0, Math.min(100, 100 - v)));
 
-      // donut rings: Press/Glaze/Kiln
-      const ringVals = [lost[1]||0, lost[2]||0, lost[3]||0];
+      // donut rings: all 5 stages
+      const ringVals = lost.slice(0, 5);
       donut.data.datasets.forEach((ds, idx) => {
         const lostPct = Number((ringVals[idx] || 0).toFixed(1));
         const remPct  = Number((100 - lostPct).toFixed(1));

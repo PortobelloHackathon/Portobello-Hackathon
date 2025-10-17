@@ -96,12 +96,14 @@
               </select>
             </div>
 
-            <!-- Datetime filter -->
+            <!-- Datetime filter (range) -->
             <div>
               <label class="block text-xs text-slate-600 mb-1">Datetime</label>
-              <select id="fDatetime" class="border rounded p-2 w-64 bg-white">
-                <option value="">All timestamps</option>
-              </select>
+              <div class="flex gap-1">
+                <input id="fDatetimeStart" type="datetime-local" class="border rounded p-2 w-36" placeholder="From" />
+                <span class="px-1 text-slate-500">–</span>
+                <input id="fDatetimeEnd" type="datetime-local" class="border rounded p-2 w-36" placeholder="To" />
+              </div>
             </div>
 
             <!-- Page size -->
@@ -186,59 +188,90 @@
 
   <script>
     // ---------------- Config: column groups & columns ----------------
-    const COLS = [
-      {
-        group: 'meta',
-        label: 'Meta',
-        cols: [
-          { key: 'datetime', label: 'Datetime', type: 'string', width: 'w-[180px]' },
-          { key: 'recipe_id', label: 'Recipe', type: 'number', width: 'w-[90px]' },
-        ]
-      },
-      {
-        group: 'start',
-        label: 'Start',
-        cols: [
-          { key: 'vol_start', label: 'Start ft²', type: 'number', width: 'w-[120px]' },
-        ]
-      },
-      {
-        group: 'press',
-        label: 'Press',
-        cols: [
-          { key: 'pressure_psi', label: 'Pressure (psi)', type: 'number', width: 'w-[130px]' },
-          { key: 'vol_press_out', label: 'Press Out ft²', type: 'number', width: 'w-[140px]' },
-        ]
-      },
-      {
-        group: 'glaze',
-        label: 'Glaze',
-        cols: [
-          { key: 'vol_glaze_out', label: 'Glaze Out ft²', type: 'number', width: 'w-[140px]' },
-        ]
-      },
-      {
-        group: 'kiln',
-        label: 'Kiln / Env',
-        cols: [
-          { key: 'max_temp', label: 'Max Temp', type: 'number', width: 'w-[110px]' },
-          { key: 'cooling_profile', label: 'Cooling', type: 'number', width: 'w-[100px]' },
-          { key: 'moisture_pct', label: 'Moisture %', type: 'number', width: 'w-[110px]' },
-          { key: 'external_humidity', label: 'Humidity %', type: 'number', width: 'w-[110px]' },
-          { key: 'air_flow_top_setting', label: 'Air Flow', type: 'number', width: 'w-[100px]' },
-          { key: 'air_cooling', label: 'Air Cooling', type: 'number', width: 'w-[110px]' },
-          { key: 'thickness_mm', label: 'Thickness (mm)', type: 'number', width: 'w-[130px]' },
-          { key: 'vol_kiln_out', label: 'Kiln Out ft²', type: 'number', width: 'w-[130px]' },
-        ]
-      },
-      {
-        group: 'sort',
-        label: 'Sort',
-        cols: [
-          { key: 'vol_sort_out', label: 'Sort Out ft²', type: 'number', width: 'w-[130px]' },
-        ]
-      },
-    ];
+const COLS = [
+  {
+    group: 'meta',
+    label: 'Meta',
+    cols: [
+      { key: 'datetime', label: 'Datetime', type: 'string', width: 'w-[180px]' },
+      { key: 'recipe_id', label: 'Recipe ID', type: 'number', width: 'w-[90px]' },
+      { key: 'gloss_type', label: 'Gloss Type', type: 'string', width: 'w-[130px]' },
+      { key: 'gloss_amount_target_g_per_tile', label: 'Gloss Target (g/tile)', type: 'number', width: 'w-[160px]' },
+    ]
+  },
+  {
+    group: 'start',
+    label: 'Start',
+    cols: [
+      { key: 'vol_start', label: 'Start ft²', type: 'number', width: 'w-[120px]' },
+    ]
+  },
+  {
+    group: 'press',
+    label: 'Press',
+    cols: [
+      { key: 'vol_press_out', label: 'Press Out ft²', type: 'number', width: 'w-[140px]' },
+      { key: 'target_pressure', label: 'Target Pressure', type: 'number', width: 'w-[130px]' },
+      { key: 'actual_pressure', label: 'Actual Pressure', type: 'number', width: 'w-[130px]' },
+      { key: 'layers_tossed', label: 'Layers Tossed', type: 'number', width: 'w-[120px]' },
+      { key: 'desired_thickness', label: 'Desired Thickness (mm)', type: 'number', width: 'w-[160px]' },
+    ]
+  },
+  {
+    group: 'glaze',
+    label: 'Glaze',
+    cols: [
+      { key: 'vol_glaze_out', label: 'Glaze Out ft²', type: 'number', width: 'w-[140px]' },
+    ]
+  },
+  {
+    group: 'kiln_recipe',
+    label: 'Recipe / Targets',
+    cols: [
+      { key: 'recipe_air_cooling', label: 'Recipe Air Cooling', type: 'number', width: 'w-[140px]' },
+      { key: 'recipe_moisture', label: 'Recipe Moisture', type: 'number', width: 'w-[130px]' },
+      { key: 'recipe_air_flow', label: 'Recipe Air Flow', type: 'number', width: 'w-[130px]' },
+      { key: 'recipe_max_temp', label: 'Recipe Max Temp (°C)', type: 'number', width: 'w-[150px]' },
+      { key: 'recipe_humidity', label: 'Recipe Humidity %', type: 'number', width: 'w-[140px]' },
+    ]
+  },
+  {
+    group: 'kiln_actual',
+    label: 'Kiln Actuals',
+    cols: [
+      { key: 'kiln_air_cooling', label: 'Kiln Air Cooling', type: 'number', width: 'w-[130px]' },
+      { key: 'kiln_moisture', label: 'Kiln Moisture', type: 'number', width: 'w-[130px]' },
+      { key: 'kiln_air_flow', label: 'Kiln Air Flow', type: 'number', width: 'w-[130px]' },
+      { key: 'kiln_max_temp', label: 'Kiln Max Temp (°C)', type: 'number', width: 'w-[150px]' },
+      { key: 'kiln_humidity', label: 'Kiln Humidity %', type: 'number', width: 'w-[140px]' },
+    ]
+  },
+  {
+    group: 'delta',
+    label: 'Delta vs Recipe',
+    cols: [
+      { key: 'delta_air_cooling', label: 'Δ Air Cooling', type: 'number', width: 'w-[120px]' },
+      { key: 'delta_moisture', label: 'Δ Moisture', type: 'number', width: 'w-[120px]' },
+      { key: 'delta_air_flow', label: 'Δ Air Flow', type: 'number', width: 'w-[120px]' },
+      { key: 'delta_max_temp', label: 'Δ Max Temp (°C)', type: 'number', width: 'w-[140px]' },
+      { key: 'delta_humidity', label: 'Δ Humidity %', type: 'number', width: 'w-[140px]' },
+    ]
+  },
+  {
+    group: 'kiln',
+    label: 'Kiln Output',
+    cols: [
+      { key: 'vol_kiln_out', label: 'Kiln Out ft²', type: 'number', width: 'w-[130px]' },
+    ]
+  },
+  {
+    group: 'sort',
+    label: 'Sort',
+    cols: [
+      { key: 'vol_sort_out', label: 'Sort Out ft²', type: 'number', width: 'w-[130px]' },
+    ]
+  },
+];
 
     // visible group state
     const groupVisible = { meta:true, start:true, press:true, glaze:true, kiln:true, sort:true };
@@ -378,7 +411,20 @@
       const q = ($('q').value || '').toLowerCase();
       const rid = $('fRecipe').value;
       const stage = $('fStage').value;
-      const dt = $('fDatetime').value;
+      // Datetime range filter
+      const dtStartRaw = $('fDatetimeStart').value;
+      const dtEndRaw = $('fDatetimeEnd').value;
+      let dtStart = null, dtEnd = null;
+      if (dtStartRaw) {
+        // Parse as UTC if possible
+        dtStart = new Date(dtStartRaw.length === 16 ? dtStartRaw + ':00Z' : dtStartRaw + 'Z');
+        if (isNaN(dtStart)) dtStart = new Date(dtStartRaw);
+      }
+      if (dtEndRaw) {
+        // Parse as UTC if possible
+        dtEnd = new Date(dtEndRaw.length === 16 ? dtEndRaw + ':00Z' : dtEndRaw + 'Z');
+        if (isNaN(dtEnd)) dtEnd = new Date(dtEndRaw);
+      }
       const colFilters = collectColumnFilters();
 
       filtered = typedRows.filter(r => {
@@ -387,7 +433,18 @@
           const lv = stageLevel(r);
           if (lv !== stage) return false;
         }
-        if (dt && r.datetime !== dt) return false;
+        // Datetime range filter
+        if ((dtStart || dtEnd) && r.datetime) {
+          // Parse r.datetime as ISO 8601, always UTC
+          let rowDate = new Date(r.datetime);
+          if (isNaN(rowDate)) return false;
+          // If start specified, must be >= start
+          if (dtStart && rowDate < dtStart) return false;
+          // If end specified, must be <= end
+          if (dtEnd && rowDate > dtEnd) return false;
+        }
+        // If range is specified but r.datetime missing, skip
+        if ((dtStart || dtEnd) && !r.datetime) return false;
 
         // global search
         if (q) {
@@ -480,36 +537,51 @@
     async function init() {
       // load CSV
       try {
-        const txt = await fetch('tiles6.csv', { cache: 'no-store' }).then(r => r.text());
+        const txt = await fetch('tiles.csv', { cache: 'no-store' }).then(r => r.text());
         raw = parseCSV(txt);
         $('dataStatus').textContent = `${raw.rows.length} rows loaded`;
 
-        // numeric conversion
-        const numKeys = new Set([
+        // Determine numeric columns from the current schema
+        // Always include known numeric columns, but also add any new columns that match vol_*_out or other numeric-like fields
+        const baseNumKeys = [
           'recipe_id','vol_start','pressure_psi','vol_press_out','vol_glaze_out',
           'max_temp','cooling_profile','moisture_pct','external_humidity',
           'air_flow_top_setting','air_cooling','thickness_mm','vol_kiln_out','vol_sort_out'
-        ]);
+        ];
+        // Add any columns in tiles.csv that look like new numeric outputs (e.g. future vol_x_out columns)
+        const extraNumKeys = raw.columns.filter(c =>
+          /^vol_.*_out$/.test(c) && !baseNumKeys.includes(c)
+        );
+        // Also add any other columns in the schema that are not in baseNumKeys but look numeric (e.g. end in _pct, _mm, _psi, _setting)
+        const moreNumKeys = raw.columns.filter(c =>
+          !baseNumKeys.includes(c) &&
+          (/_pct$|_mm$|_psi$|_setting$|_temp$|_humidity$|_flow$|_cooling$|_thickness$/.test(c))
+        );
+        const numKeys = new Set([...baseNumKeys, ...extraNumKeys, ...moreNumKeys]);
+
+        // Numeric conversion for all numeric columns
         typedRows = raw.rows.map(r => {
           const o = { ...r };
-          for (const k of numKeys) o[k] = toNumber(r[k]);
+          for (const k of numKeys) {
+            if (k in r) o[k] = toNumber(r[k]);
+          }
           // keep datetime string as-is
           return o;
         });
 
         // Fill filter options
+        // Use only recipes that are finite numbers
         const ridSet = Array.from(new Set(typedRows.map(r => r.recipe_id).filter(v => Number.isFinite(v)))).sort((a,b)=>a-b);
         $('fRecipe').innerHTML = '<option value="">All recipes</option>' + ridSet.map(v => `<option value="${v}">${v}</option>`).join('');
 
-        const dtSet = Array.from(new Set(typedRows.map(r => r.datetime).filter(Boolean)));
-        $('fDatetime').innerHTML = '<option value="">All timestamps</option>' + dtSet.map(v => `<option value="${v}">${v}</option>`).join('');
+        // Datetime filter: no longer needed (was dropdown)
 
         // Build headers (visible groups)
         buildHeaders();
         runPipeline();
 
       } catch (e) {
-        $('dataStatus').textContent = 'Error loading tiles6.csv';
+        $('dataStatus').textContent = 'Error loading tiles.csv';
         $('warnMissing').textContent = String(e);
       }
     }
@@ -518,7 +590,8 @@
     $('q').addEventListener('input', () => { page = 1; runPipeline(); });
     $('fRecipe').addEventListener('change', () => { page = 1; runPipeline(); });
     $('fStage').addEventListener('change', () => { page = 1; runPipeline(); });
-    $('fDatetime').addEventListener('change', () => { page = 1; runPipeline(); });
+    $('fDatetimeStart').addEventListener('change', () => { page = 1; runPipeline(); });
+    $('fDatetimeEnd').addEventListener('change', () => { page = 1; runPipeline(); });
     $('pageSize').addEventListener('change', () => { page = 1; runPipeline(); });
     $('prevPage').addEventListener('click', () => { if (page > 1) { page--; runPipeline(); }});
     $('nextPage').addEventListener('click', () => { page++; runPipeline(); });
@@ -536,7 +609,8 @@
       $('q').value = '';
       $('fRecipe').value = '';
       $('fStage').value = '';
-      $('fDatetime').value = '';
+      $('fDatetimeStart').value = '';
+      $('fDatetimeEnd').value = '';
       document.querySelectorAll('#theadFilters input').forEach(i => i.value = '');
       page = 1;
       runPipeline();

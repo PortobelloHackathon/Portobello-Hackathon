@@ -54,7 +54,7 @@
             <button id="btnExportSummary" class="px-3 py-1.5 rounded bg-pbBlue text-white">Download Recipe Summary</button>
             <button id="btnExportPerBatch" class="px-3 py-1.5 rounded border">Download Per-batch Yields</button>
           </div>
-          <p class="text-xs text-slate-500 mt-2">Files are generated in the browser from <code>tiles6.csv</code>.</p>
+          <p class="text-xs text-slate-500 mt-2">Files are generated in the browser from <code>tiles.csv</code>.</p>
         </section>
 
         <section class="mt-4 rounded-2xl border bg-white p-4 shadow-sm">
@@ -114,7 +114,7 @@ function pickVols(columns,row){
 }
 
 const DATA={columns:[],rows:[]}; let BY_R={};
-fetch('tiles6.csv')
+fetch('tiles.csv')
   .then(r=>r.text())
   .then(txt=>{
     Object.assign(DATA, parseCSV(txt));
@@ -122,7 +122,7 @@ fetch('tiles6.csv')
     buildSummary();
     wireExports();
   })
-  .catch(()=>{$('dataStatus').textContent='Could not load tiles6.csv';});
+  .catch(()=>{$('dataStatus').textContent='Could not load tiles.csv';});
 
 function buildSummary(){
   // group & compute yields
