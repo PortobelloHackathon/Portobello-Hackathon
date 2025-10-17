@@ -264,7 +264,8 @@
 
           <!-- CHART -->
           <div class="mt-6 grid grid-cols-12 gap-4">
-            <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 pb- h-[30rem]">
+            <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-6 pb-10 h-[32rem]">
+
 
               <div class="flex items-center justify-between mb-2">
                 <h3 class="text-lg font-semibold text-slate-800">Material Loss Per Stage</h3>
@@ -654,7 +655,8 @@ $('btnRun').disabled = false;
 
     // Enable the run button now that we're ready
     const runBtn = $('btnRun');
-    if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Call Next Cycle'; }
+    runBtn.classList.remove('opacity-80', 'cursor-wait');
+runBtn.textContent = 'Call Next Cycle';
   }catch(e){
     $('statusText').textContent='Python/model failed.';
     logDebug(e.toString());
@@ -760,7 +762,7 @@ async function runOneRowProgressively(row){
 
   // disable button during run
   const runBtn = $('btnRun');
-  if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Running…'; }
+  if (runBtn) { runBtn.textContent = 'Running...'; }
 
   simRunning=true; resetUI(); currentRow=row;
 
@@ -819,7 +821,8 @@ async function runOneRowProgressively(row){
   simRunning=false;
 
   // re-enable button if model still loaded
-  if (runBtn && modelLoaded) { runBtn.disabled = false; runBtn.textContent = 'Call Next Cycle'; }
+  runBtn.classList.remove('opacity-80', 'cursor-wait');
+runBtn.textContent = 'Call Next Cycle';
 }
 
 /* =================== Wiring =================== */
@@ -828,7 +831,7 @@ async function onGenerate(){
   try{
     // Disable immediately to avoid double clicks
     const runBtn = $('btnRun');
-    if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Preparing…'; }
+    if (runBtn) { runBtn.textContent = 'Preparing…'; runBtn.classList.add('opacity-80', 'cursor-wait'); }
 
     if(!cachedRows){
       $('statusText').textContent='Loading CSV…';
@@ -842,7 +845,8 @@ async function onGenerate(){
     $('statusText').textContent='Failed to load/use endpoints.csv';
     logDebug(e.toString());
     const runBtn = $('btnRun');
-    if (runBtn && modelLoaded) { runBtn.disabled = false; runBtn.textContent = 'Call Next Cycle'; }
+    runBtn.classList.remove('opacity-80', 'cursor-wait');
+runBtn.textContent = 'Call Next Cycle';
   }
 }
 
