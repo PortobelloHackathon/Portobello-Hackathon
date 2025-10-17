@@ -17,7 +17,7 @@
         extend: {
           fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
           colors: {
-            pbBlue: '#0B1F52',       // brand dark blue
+            pbBlue: '#0B1F52',
             pbSlate: '#6B7280',
             pbGrayLight: '#CFD3DA',
             pbGrayMid:   '#7C8390',
@@ -104,22 +104,17 @@
 
           <!-- Loss Breakdown -->
           <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-3 md:p-4 h-[16rem] overflow-hidden">
-            <h3 class="text-lg font-semibold text-slate-800 mb-2">Loss Breakdown by Step</h3>
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-slate-800 mb-2">Loss Breakdown by Step</h3>
+              <span id="dashLoading" class="text-xs text-slate-500">loading…</span>
+            </div>
 
             <div class="flex items-center justify-center gap-6 md:gap-10">
               <ul class="space-y-1.5 text-sm text-slate-700">
-                <li class="flex items-center">
-                  <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#1F77B4"></span> Cutting
-                </li>
-                <li class="flex items-center">
-                  <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#FF7F0E"></span> Assembly
-                </li>
-                <li class="flex items-center">
-                  <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#2CA02C"></span> QC
-                </li>
-                <li class="flex items-center">
-                  <span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#9467BD"></span> Packaging
-                </li>
+                <li class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#1F77B4"></span> Cutting</li>
+                <li class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#FF7F0E"></span> Assembly</li>
+                <li class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#2CA02C"></span> QC</li>
+                <li class="flex items-center"><span class="inline-block h-3 w-3 rounded-full mr-2" style="background:#9467BD"></span> Packaging</li>
               </ul>
 
               <div class="w-[190px] h-[190px]">
@@ -144,8 +139,8 @@
     const STATUS_GREEN  = '#2BAF6A'; // past
     const STATUS_YELLOW = '#F4B000'; // current
 
-    // Stage labels for x-axis
-    const STAGE_LABELS = ['Start', 'Press', 'Glaze', 'Kiln', 'Sort'];
+    // categorical palette for breakdown
+    const CUT = '#1F77B4', ASM = '#FF7F0E', QC = '#2CA02C', PKG = '#9467BD';
 
     // ---- Chart.js defaults ----
     Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
@@ -158,9 +153,11 @@
     const kpi2Ctx  = document.getElementById('kpiDonut2');
     const kpi3Ctx  = document.getElementById('kpiDonut3');
     const multiCtx = document.getElementById('multiRingDonut');
+    const dashLoading = document.getElementById('dashLoading');
 
-    // ----- Line chart with stage x-axis + status colors -----
+    // ----- Line chart (stages + status colors) -----
     let statuses = []; // ['past','current','future',...] length 5
+    let stageLabels = ['Start','Press','Glaze','Kiln','Sort']; // fallback
 
     function colorFor(idx) {
       const s = statuses[idx];
@@ -172,12 +169,12 @@
     const lossLineChart = new Chart(lineCtx, {
       type: 'line',
       data: {
-        labels: STAGE_LABELS,  // <-- fixed to stages
+        labels: stageLabels,
         datasets: [{
           label: 'Loss (kg)',
           data: [],
           segment: { borderColor: (ctx) => colorFor(ctx.p0DataIndex) },
-          backgroundColor: PB_GRAY_L + '55', // subtle constant fill
+          backgroundColor: PB_GRAY_L + '55',
           pointBackgroundColor: (ctx) => colorFor(ctx.dataIndex),
           pointRadius: 4,
           pointHoverRadius: 6,
@@ -193,18 +190,17 @@
             grid: { display: false },
             ticks: {
               maxRotation: 0,
-              callback: (val, idx) => `${idx + 1}. ${STAGE_LABELS[idx]}`
+              callback: (val, idx) => `${idx + 1}. ${stageLabels[idx]}`
             }
           },
           y: { grid: { color: PB_GRAY_L } }
         },
         plugins: {
-          legend: { display: false },
           tooltip: {
             callbacks: {
               title: (items) => {
                 const i = items[0].dataIndex;
-                return `Stage ${i + 1} — ${STAGE_LABELS[i]}`;
+                return `Stage ${i + 1} — ${stageLabels[i]}`;
               }
             }
           }
@@ -212,70 +208,73 @@
       }
     });
 
-    // ----- Donut helper -----
+    // ----- KPI donuts -----
     function makeDonut(ctx, pct, color = PB_BLUE) {
       return new Chart(ctx, {
         type: 'doughnut',
         data: {
           labels: ['Complete','Remaining'],
-          datasets: [{
-            data: [pct, 100 - pct],
-            backgroundColor: [color, PB_GRAY_L],
-            borderWidth: 0,
-            cutout: '70%'
-          }]
+          datasets: [{ data: [pct, 100 - pct], backgroundColor: [color, PB_GRAY_L], borderWidth: 0, cutout: '70%' }]
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { enabled: false } }
-        }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
       });
     }
+    const kpiYield  = makeDonut(kpi1Ctx, 0, PB_BLUE);
+    const kpiScrap  = makeDonut(kpi2Ctx, 0, '#94A3B8');
+    const kpiOnTime = makeDonut(kpi3Ctx, 0, STATUS_GREEN);
 
-    // KPI donuts (fixed hex for scrap color)
-    const kpiYield  = makeDonut(kpi1Ctx, 0, '#0B1F52');
-    const kpiScrap  = makeDonut(kpi2Ctx, 0, '#94A3B8'); // fixed hex
-    const kpiOnTime = makeDonut(kpi3Ctx, 0, '#2BAF6A');
-
-    // ----- Multi-ring donut with equal ring widths -----
-    const CUT = '#1F77B4', ASM = '#FF7F0E', QC = '#2CA02C', PKG = '#9467BD', BG = '#EEF2F6';
-    const THICK = 10;
-    const band = (innerPct) => ({ cutout: `${innerPct}%`, radius: `${innerPct + THICK}%` });
-    const b1 = band(70), b2 = band(80), b3 = band(90);
-
-    new Chart(multiCtx, {
+    // ----- Breakdown donut (single ring, 4 slices) -----
+    const breakdownChart = new Chart(multiCtx, {
       type: 'doughnut',
       data: {
         labels: ['Cutting','Assembly','QC','Packaging'],
-        datasets: [
-          { data: [90,10,0,0], backgroundColor: [CUT, BG, BG, BG], borderColor: '#fff', borderWidth: 0, cutout: b1.cutout, radius: b1.radius },
-          { data: [0,80,20,0], backgroundColor: [BG, ASM, BG, BG], borderColor: '#fff', borderWidth: 0, cutout: b2.cutout, radius: b2.radius },
-          { data: [0,0,70,30], backgroundColor: [BG, BG, QC, PKG], borderColor: '#fff', borderWidth: 0, cutout: b3.cutout, radius: '98%' }
-        ]
+        datasets: [{
+          data: [0,0,0,0],
+          backgroundColor: [CUT, ASM, QC, PKG],
+          borderWidth: 0,
+          cutout: '55%'
+        }]
       },
-      options: { responsive: true, maintainAspectRatio: false, rotation: -90 * (Math.PI/180), plugins: { legend: { display: false }, tooltip: { enabled: false } } }
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true } } }
     });
 
-    // ----- Update entry point -----
-    // data = { lossKg:[...5], statuses:[...5], kpis:{yieldPct,scrapPct,onTimePct} }
-    function updateDashboard(data) {
-      statuses = data.statuses || [];
-      lossLineChart.data.labels = STAGE_LABELS;       // fixed to stages
-      lossLineChart.data.datasets[0].data = data.lossKg || [];
-      lossLineChart.update();
+    // ----- Load from API -----
+    async function loadDashboard() {
+      try {
+        dashLoading.textContent = 'loading…';
 
-      kpiYield.data.datasets[0].data = [data.kpis.yieldPct, 100 - data.kpis.yieldPct]; kpiYield.update();
-      kpiScrap.data.datasets[0].data = [data.kpis.scrapPct, 100 - data.kpis.scrapPct]; kpiScrap.update();
-      kpiOnTime.data.datasets[0].data = [data.kpis.onTimePct, 100 - data.kpis.onTimePct]; kpiOnTime.update();
+        const [stagesRes, dashRes] = await Promise.all([
+          fetch('/api/stats/stages').then(r => r.json()),
+          fetch('/api/stats/dashboard').then(r => r.json()),
+        ]);
+
+        // line
+        stageLabels = stagesRes.stages || stageLabels;
+        statuses = stagesRes.statuses || [];
+        lossLineChart.data.labels = stageLabels;
+        lossLineChart.data.datasets[0].data = stagesRes.lossKg || [];
+        lossLineChart.update();
+
+        // kpis
+        const { yieldPct=0, scrapPct=0, onTimePct=0 } = dashRes.kpis || {};
+        kpiYield.data.datasets[0].data = [yieldPct, 100 - yieldPct]; kpiYield.update();
+        kpiScrap.data.datasets[0].data = [scrapPct, 100 - scrapPct]; kpiScrap.update();
+        kpiOnTime.data.datasets[0].data = [onTimePct, 100 - onTimePct]; kpiOnTime.update();
+
+        // breakdown
+        const pct = dashRes.breakdown?.pct || [0,0,0,0];
+        breakdownChart.data.datasets[0].data = pct;
+        breakdownChart.update();
+
+        dashLoading.textContent = '';
+      } catch (e) {
+        console.error(e);
+        dashLoading.textContent = 'failed to load';
+      }
     }
 
-    // ---- Demo (5 stages) ----
-    updateDashboard({
-      lossKg:   [12, 15, 13, 18, 14],                       // Start→Press→Glaze→Kiln→Sort
-      statuses: ['past','past','current','future','future'],
-      kpis:     { yieldPct: 86, scrapPct: 14, onTimePct: 92 }
-    });
+    // initial load
+    loadDashboard();
   </script>
 </body>
 </html>
