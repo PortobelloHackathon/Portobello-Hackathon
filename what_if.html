@@ -244,6 +244,7 @@
 
               <div class="mt-5 flex items-center gap-2">
                 <button id="wfRun" class="px-3 py-1.5 rounded bg-pbBlue text-white">Predict</button>
+                <!-- fallback toggle removed; predictor auto-falls back when required -->
                 <span id="wfHint" class="text-xs text-slate-500"></span>
               </div>
             </div>
@@ -359,7 +360,10 @@ const wf = {
   ['wf_kiln_humidity','wf_kiln_humidity_val'],
 ].forEach(([inId, labelId])=>{
   const input = $(inId), label = $(labelId);
-  input.addEventListener('input', ()=>{ label.textContent = input.value; autoComputeDeltas(); debouncedRun(); });
+  if (!input || !label) return; // guard in case an element is missing
+  // initialize label
+  label.textContent = input.value;
+  input.addEventListener('input', ()=>{ label.textContent = input.value; autoComputeDeltas(); });
 });
 
 
@@ -427,6 +431,7 @@ wf.charts.line = lineChartFactory($('wfLine').getContext('2d'));
 
 /* ===================== PYODIDE + MODEL ===================== */
 let pyodide=null, modelLoaded=false;
+const modelMeta = { stageFeatures: null, recipeSetpoints: null };
 async function initPyodideAndModel(){
   try{
     wf.els.status.textContent='Loading Python…';
@@ -552,8 +557,18 @@ def predict(payload):
     try { pyodide.FS.unlink('/tmp/ml_model.joblib'); } catch(e){}
     pyodide.FS.writeFile('/tmp/ml_model.joblib', new Uint8Array(buf));
     await pyodide.runPythonAsync(`load_model("/tmp/ml_model.joblib")`);
+    // try to extract model metadata (stage_features, recipe_setpoints) for diagnostics
+    try{
+      const sfJson = await pyodide.runPythonAsync("import json\njson.dumps({k:list(v) for k,v in stage_features.items()})");
+      modelMeta.stageFeatures = JSON.parse(sfJson);
+    }catch(e){ console.warn('Could not extract stage_features', e); }
+    try{
+      const rpJson = await pyodide.runPythonAsync("import json\njson.dumps({str(k):v for k,v in recipe_setpoints.items()})");
+      modelMeta.recipeSetpoints = JSON.parse(rpJson);
+    }catch(e){ console.warn('Could not extract recipe_setpoints', e); }
     modelLoaded=true;
     wf.els.status.textContent='Model loaded ✅';
+    console.log('Model metadata:', modelMeta);
   }catch(e){
     console.error(e);
     modelLoaded=false;
@@ -565,17 +580,23 @@ initPyodideAndModel();
 /* ===================== PAYLOAD ===================== */
 // keep deltas synced when sliders move (kiln - recipe)
 function autoComputeDeltas(){
-  const r_ac = toNum(wf.els.r_ac.value), k_ac = toNum(wf.els.k_ac.value);
-  const r_m  = toNum(wf.els.r_m.value),  k_m  = toNum(wf.els.k_m.value);
-  const r_af = toNum(wf.els.r_af.value), k_af = toNum(wf.els.k_af.value);
-  const r_t  = toNum(wf.els.r_t.value),  k_t  = toNum(wf.els.k_t.value);
-  const r_h  = toNum(wf.els.r_h.value),  k_h  = toNum(wf.els.k_h.value);
+  const r_ac = toNum(wf.els.r_ac?.value), k_ac = toNum(wf.els.k_ac?.value);
+  const r_m  = toNum(wf.els.r_m?.value),  k_m  = toNum(wf.els.k_m?.value);
+  const r_af = toNum(wf.els.r_af?.value), k_af = toNum(wf.els.k_af?.value);
+  const r_t  = toNum(wf.els.r_t?.value),  k_t  = toNum(wf.els.k_t?.value);
+  const r_h  = toNum(wf.els.r_h?.value),  k_h  = toNum(wf.els.k_h?.value);
 
-  if(!Number.isNaN(k_ac) && !Number.isNaN(r_ac)) wf.els.d_ac.value = (k_ac - r_ac).toFixed(2);
-  if(!Number.isNaN(k_m)  && !Number.isNaN(r_m )) wf.els.d_m.value  = (k_m  - r_m ).toFixed(2);
-  if(!Number.isNaN(k_af) && !Number.isNaN(r_af)) wf.els.d_af.value = (k_af - r_af).toFixed(2);
-  if(!Number.isNaN(k_t)  && !Number.isNaN(r_t )) wf.els.d_t.value  = (k_t  - r_t ).toFixed(2);
-  if(!Number.isNaN(k_h)  && !Number.isNaN(r_h )) wf.els.d_h.value  = (k_h  - r_h ).toFixed(2);
+  if (!wf.els.d_ac) wf.els.d_ac = $('wf_delta_air_cooling');
+  if (!wf.els.d_m)  wf.els.d_m  = $('wf_delta_moisture');
+  if (!wf.els.d_af) wf.els.d_af = $('wf_delta_air_flow');
+  if (!wf.els.d_t)  wf.els.d_t  = $('wf_delta_max_temp');
+  if (!wf.els.d_h)  wf.els.d_h  = $('wf_delta_humidity');
+
+  if(!Number.isNaN(k_ac) && !Number.isNaN(r_ac) && wf.els.d_ac) wf.els.d_ac.value = (k_ac - r_ac).toFixed(2);
+  if(!Number.isNaN(k_m)  && !Number.isNaN(r_m ) && wf.els.d_m)  wf.els.d_m.value  = (k_m  - r_m ).toFixed(2);
+  if(!Number.isNaN(k_af) && !Number.isNaN(r_af) && wf.els.d_af) wf.els.d_af.value = (k_af - r_af).toFixed(2);
+  if(!Number.isNaN(k_t)  && !Number.isNaN(r_t ) && wf.els.d_t)  wf.els.d_t.value  = (k_t  - r_t ).toFixed(2);
+  if(!Number.isNaN(k_h)  && !Number.isNaN(r_h ) && wf.els.d_h)  wf.els.d_h.value  = (k_h  - r_h ).toFixed(2);
 }
 
 function wfPayload(){
@@ -664,7 +685,28 @@ function updateChartFromStages(s){
 }
 
 async function runWFOnce(payload){
-  if(modelLoaded){
+  // removed wf_use_fallback checkbox; fallback decision made from model metadata and modelLoaded
+  const t0 = performance.now();
+  // If model metadata is available, check required features vs provided payload keys
+  let forceFallbackDueToMeta = false;
+  if (modelMeta.stageFeatures) {
+    try{
+      const keys = Object.keys(payload);
+      console.log('Payload keys:', keys);
+      for (const stageKey of Object.keys(modelMeta.stageFeatures)){
+        const req = modelMeta.stageFeatures[stageKey] || [];
+        const missing = req.filter(f => !(f in payload) && !(String(f) in payload));
+        console.log(`Stage ${stageKey} requires:`, req, 'missing in payload:', missing);
+        if (missing.length) forceFallbackDueToMeta = true;
+      }
+      if (forceFallbackDueToMeta) {
+        console.warn('Model expects features missing from payload — forcing fallback predictor');
+        $('wfHint').textContent = 'Model missing features; using fallback predictor';
+      }
+    }catch(e){ console.warn('Model meta check failed', e); }
+  }
+  const shouldUseModel = modelLoaded && !forceFallbackDueToMeta;
+  if (shouldUseModel){
     try{
       console.log("Running model prediction with start volume:", payload.vol_start);
       const pyPredict = pyodide.globals.get('predict');
@@ -673,30 +715,82 @@ async function runWFOnce(payload){
       const resObj = pyOut.toJs();
       const res = JSON.parse(JSON.stringify(resObj)); // full deep copy for Chart.js
       pyPayload.destroy(); pyOut.destroy(); pyPredict.destroy();
+      const dur = performance.now() - t0;
+      console.log(`Pyodide predict took ${dur.toFixed(0)}ms`);
+      $('wfHint').textContent = `Predict: ${dur.toFixed(0)} ms`;
       return res;
     }catch(e){ console.warn('Predict error, check features in model bundle', e); }
   }
   // soft fallback if model missing — deterministic pass-through
   const start = payload.vol_start || 0;
-  // Dynamic ratios for fallback
-  const ratios = { press: 0.982, glaze: 0.975, kiln: 0.95, sort: 0.885 };
-  const press = Math.round(start * ratios.press);
-  const glaze = Math.round(press * ratios.glaze);
-  const kiln  = Math.round(glaze * ratios.kiln);
-  const sort  = Math.round(kiln  * ratios.sort);
-  return { stages: {
+  // Make fallback ratios depend on a few key inputs so the UI changes are visible:
+  // - Press performance depends on actual pressure, desired thickness, and layers tossed
+  // - Glaze depends on recipe air cooling and moisture
+  // - Kiln depends on kiln max temp, kiln air cooling, and moisture
+  function normVal(v, min, max){ if (!Number.isFinite(v) || !Number.isFinite(min) || !Number.isFinite(max) || max===min) return 0.5; return clamp((v - min) / (max - min), 0, 1); }
+
+  // read ranges from elements if present (fall back to sensible defaults)
+  const tpEl = $('wf_actual_pressure'); const tpMin = tpEl ? Number(tpEl.min||2500) : 2500; const tpMax = tpEl ? Number(tpEl.max||3400) : 3400;
+  const actualP = Number(payload.actual_pressure || payload.pressure_psi || tpMin);
+  const pNorm = normVal(actualP, tpMin, tpMax);
+
+  const thEl = $('wf_desired_thickness'); const thMin = thEl ? Number(thEl.min||7.8) : 7.8; const thMax = thEl ? Number(thEl.max||9.2) : 9.2;
+  const thickness = Number(payload.desired_thickness || payload.thickness_mm || thMin);
+  const thNorm = normVal(thickness, thMin, thMax);
+
+  const layers = Number(payload.layers_tossed || 0);
+
+  const r_ac_min = 4.4, r_ac_max = 5.6;
+  const rec_ac = Number(payload.recipe_air_cooling || payload.k_set_air_cooling || r_ac_min);
+  const rec_ac_norm = normVal(rec_ac, r_ac_min, r_ac_max);
+  const kiln_ac_min = 4.4, kiln_ac_max = 5.6;
+  const kiln_ac = Number(payload.kiln_air_cooling || payload.air_cooling || kiln_ac_min);
+  const kiln_ac_norm = normVal(kiln_ac, kiln_ac_min, kiln_ac_max);
+
+  const ktempEl = $('wf_kiln_max_temp'); const ktempMin = ktempEl ? Number(ktempEl.min||1188) : 1188; const ktempMax = ktempEl ? Number(ktempEl.max||1202) : 1202;
+  const ktemp = Number(payload.kiln_max_temp || payload.max_temp || ktempMin);
+  const ktempNorm = normVal(ktemp, ktempMin, ktempMax);
+
+  const kmoist = Number(payload.kiln_moisture || payload.moisture_pct || 6.0);
+  const kmoist_norm = normVal(kmoist, 5.0, 8.0);
+
+  // Base ratios
+  const basePress = 0.96 + 0.06 * pNorm - 0.01 * (layers/5) + 0.01 * thNorm; // favor higher pressure & thickness
+  const baseGlaze  = 0.97 + 0.02 * rec_ac_norm - 0.01 * (Math.abs(thNorm - 0.5));
+  const baseKiln   = 0.94 + 0.04 * ktempNorm + 0.02 * kiln_ac_norm - 0.01 * kmoist_norm;
+  const baseSort   = 0.88 + 0.02 * ktempNorm;
+
+  // Clamp sensible ranges
+  const pressRatio = clamp(basePress, 0.7, 0.999);
+  const glazeRatio = clamp(baseGlaze, 0.7, 0.999);
+  const kilnRatio  = clamp(baseKiln, 0.7, 0.999);
+  const sortRatio  = clamp(baseSort, 0.75, 0.995);
+
+  const press = Math.round(start * pressRatio);
+  const glaze = Math.round(press * glazeRatio);
+  const kiln  = Math.round(glaze * kilnRatio);
+  const sort  = Math.round(kiln  * sortRatio);
+
+  const res = { stages: {
     start:{status:'pred', amount:Math.round(start), min_required:null, ratio:1},
-    press:{status:'pred', amount:press, min_required:Math.round(start * (ratios.press - 0.03))},
-    glaze:{status:'pred', amount:glaze, min_required:Math.round(press * (ratios.glaze - 0.03))},
-    kiln :{status:'pred', amount:kiln,  min_required:Math.round(glaze * (ratios.kiln - 0.03))},
-    sort :{status:'pred', amount:sort,  min_required:Math.round(kiln  * (ratios.sort - 0.02))},
+    press:{status:'pred', amount:press, min_required:Math.round(start * Math.max(0, pressRatio - 0.03)), ratio:pressRatio},
+    glaze:{status:'pred', amount:glaze, min_required:Math.round(press * Math.max(0, glazeRatio - 0.03)), ratio:glazeRatio},
+    kiln :{status:'pred', amount:kiln,  min_required:Math.round(glaze * Math.max(0, kilnRatio - 0.03)), ratio:kilnRatio},
+    sort :{status:'pred', amount:sort,  min_required:Math.round(kiln  * Math.max(0.75, sortRatio - 0.02)), ratio:sortRatio},
   }};
+  const dur = performance.now() - t0;
+  console.log(`Fallback predict took ${dur.toFixed(0)}ms`);
+  $('wfHint').textContent = `Predict (fallback): ${dur.toFixed(0)} ms`;
+  return res;
 }
 
 async function runWF(){
   wf.els.status.textContent = 'Running prediction…';
   // Re-read payload every run (especially vol_start)
   const payload = wfPayload();
+  console.log('runWF payload:', payload);
+  // show a compact payload for quick on-screen feedback
+  try { $('wfHint').textContent = `Payload vol=${payload.vol_start}, pres=${payload.actual_pressure}`; } catch(e){}
   if(!payload.vol_start || !Number.isFinite(payload.vol_start)){
     wf.els.hint.textContent='Enter a Start volume.';
     wf.els.status.textContent = 'Prediction failed';
@@ -704,6 +798,7 @@ async function runWF(){
   }
   console.log("Predicting with payload:", payload);
   const res = await runWFOnce(payload);
+  console.log('Prediction result:', res);
   updateChartFromStages(res.stages);
   updateEndTime();
   updateAI(payload, res);
@@ -712,6 +807,7 @@ async function runWF(){
 $('wfRun').addEventListener('click', runWF);
 
 // auto-run on input changes (debounced)
+<<<<<<< HEAD
 let runTimer = null;
 function debouncedRun(delay = 300) {
   clearTimeout(runTimer);
@@ -719,6 +815,19 @@ function debouncedRun(delay = 300) {
     runWF();
   }, delay);
 }
+=======
+let runTimer=null;
+function debouncedRun() {
+  // Debounce input changes to avoid flooding predictions when sliding
+  if (runTimer) clearTimeout(runTimer);
+  runTimer = setTimeout(() => {
+    try { runWF(); } catch(e){ console.warn('Auto-run error', e); }
+    runTimer = null;
+  }, 600);
+}
+
+// Auto-run on input changes has been disabled — predictions run only when the user clicks Predict.
+>>>>>>> 5c786211765962a169ffdcf1f5c5168ddec579ae
 
 /* ===================== AI INSIGHTS ===================== */
 function stageLosses(vols){

@@ -61,12 +61,7 @@
         <!-- Toolbar row: Recipe filter + Scrub + Timestamp + Controls -->
         <section class="mt-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
           <div class="flex flex-wrap items-center gap-3">
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-slate-600">Recipe:</span>
-              <select id="recipeFilter" class="border rounded px-2 py-1 bg-white min-w-[7rem]">
-                <option value="__all__" selected>All</option>
-              </select>
-            </div>
+            <!-- Recipe filter removed -->
 
             <div class="flex items-center gap-2 ml-2">
               <span class="text-sm text-slate-600">Scrub</span>
@@ -81,7 +76,6 @@
             <div class="ml-auto flex items-center gap-2">
               <button id="btnPlay" class="px-3 py-1.5 rounded border">▶ Play</button>
               <button id="chooseAnalyticsTs" class="px-3 py-1.5 rounded border">Choose timestamp…</button>
-              <a href="batch-compare.html" id="btnCompare" class="px-3 py-1.5 rounded border">Compare</a>
               <button id="zoomOut"   class="px-3 py-1.5 rounded border">−</button>
               <button id="zoomIn"    class="px-3 py-1.5 rounded border">+</button>
               <button id="zoomReset" class="px-3 py-1.5 rounded border">Reset Zoom</button>
@@ -188,9 +182,9 @@
     Chart.defaults.plugins.legend.display = false;
 
     // DOM
-    const dataStatus = document.getElementById('dataStatus');
-    const recipeFilter = document.getElementById('recipeFilter');
-    const scrub   = document.getElementById('scrub');
+  const dataStatus = document.getElementById('dataStatus');
+  // recipeFilter removed from UI
+  const scrub   = document.getElementById('scrub');
     const tsLabel = document.getElementById('tsLabel');
     const btnPlay = document.getElementById('btnPlay');
     const btnDownload = document.getElementById('btnDownload');
@@ -435,9 +429,7 @@ donut._ringVals = [0, 0, 0, 0, 0];
         ALL_TIMES = Array.from(new Set(DATA.rows.map(r => r.datetime))).filter(Boolean);
         dataStatus.textContent = `${DATA.rows.length} rows loaded`;
 
-        // Recipe filter options
-        const uniqueRecipes = Array.from(new Set(DATA.rows.map(r => r.recipe_id))).filter(Boolean).sort((a,b)=>Number(a)-Number(b));
-        recipeFilter.innerHTML = '<option value="__all__">All</option>' + uniqueRecipes.map(r => `<option value="${r}">${r}</option>`).join('');
+  // Recipe filter removed - no options to populate
 
         // Modal select options (all times initially)
         selectEl.innerHTML = ALL_TIMES.map(t => {
@@ -574,26 +566,16 @@ donut._ringVals = [0, 0, 0, 0, 0];
       updateFromRow(r);
     }
 
-    // Filtering by recipe
+    // No recipe filtering: use all available timestamps
     function applyRecipeFilter() {
-      const rid = recipeFilter.value;
-      FILTERED_TIMES = (rid === '__all__'
-        ? ALL_TIMES
-        : DATA.rows.filter(r => r.recipe_id === rid).map(r => r.datetime)
-      ).filter(Boolean);
-
-      // If no rows for that recipe, fall back to All to avoid empty UI
-      if (FILTERED_TIMES.length === 0) {
-        FILTERED_TIMES = ALL_TIMES.slice();
-        recipeFilter.value = '__all__';
-      }
+      FILTERED_TIMES = ALL_TIMES.slice();
 
       // Reset scrub range to filtered sequence, start at latest
       scrub.max = Math.max(0, FILTERED_TIMES.length - 1);
       currentIndex = Math.max(0, FILTERED_TIMES.length - 1);
       scrub.value = currentIndex;
 
-      // Modal list also respects current filter
+      // Modal list respects current (unfiltered) times
       selectEl.innerHTML = FILTERED_TIMES.map(t => {
         const parsed = new Date(t.includes('T') ? t : t.replace(' ', 'T'));
         const formatted = isNaN(parsed)
@@ -611,7 +593,6 @@ donut._ringVals = [0, 0, 0, 0, 0];
 
       updateAllByIndex(currentIndex);
     }
-    recipeFilter.addEventListener('change', applyRecipeFilter);
 
     // Scrub + Play/Pause
     scrub.addEventListener('input', () => {
