@@ -5,11 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tables — Portobello Dashboard</title>
 
-  <!-- Inter font -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-
-  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -79,9 +76,9 @@
             <div>
               <label class="block text-xs text-slate-600 mb-1">Datetime</label>
               <div class="flex gap-1">
-                <input id="fDatetimeStart" type="datetime-local" class="border rounded p-2 w-36" placeholder="From" />
+                <input id="fDatetimeStart" type="datetime-local" class="border rounded p-2 w-36" />
                 <span class="px-1 text-slate-500">–</span>
-                <input id="fDatetimeEnd" type="datetime-local" class="border rounded p-2 w-36" placeholder="To" />
+                <input id="fDatetimeEnd" type="datetime-local" class="border rounded p-2 w-36" />
               </div>
             </div>
             <div>
@@ -99,29 +96,17 @@
             </div>
           </div>
 
-          <div class="mt-4 border-t pt-3">
-            <span class="text-xs text-slate-600 mr-3">Column groups:</span>
-            <label class="inline-flex items-center mr-4 text-sm">
-              <input type="checkbox" class="groupToggle mr-2" data-group="meta" checked /> Meta
-            </label>
-            <label class="inline-flex items-center mr-4 text-sm">
-              <input type="checkbox" class="groupToggle mr-2" data-group="start" checked /> Start
-            </label>
-            <label class="inline-flex items-center mr-4 text-sm">
-              <input type="checkbox" class="groupToggle mr-2" data-group="press" checked /> Press
-            </label>
-            <label class="inline-flex items-center mr-4 text-sm">
-              <input type="checkbox" class="groupToggle mr-2" data-group="glaze" checked /> Glaze
-            </label>
-            <label class="inline-flex items-center mr-4 text-sm">
-              <input type="checkbox" class="groupToggle mr-2" data-group="kiln" checked /> Kiln
-            </label>
-            <label class="inline-flex items-center mr-4 text-sm">
-              <input type="checkbox" class="groupToggle mr-2" data-group="sort" checked /> Sort
-            </label>
-            <label class="inline-flex items-center mr-4 text-sm">
-              <input type="checkbox" class="groupToggle mr-2" data-group="loss_yield" checked /> Loss / Yield
-            </label>
+          <!-- group toggles -->
+          <div class="mt-4 border-t pt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            <label><input type="checkbox" class="groupToggle mr-2" data-group="meta" checked>Meta</label>
+            <label><input type="checkbox" class="groupToggle mr-2" data-group="start" checked>Start</label>
+            <label><input type="checkbox" class="groupToggle mr-2" data-group="press" checked>Press</label>
+            <label><input type="checkbox" class="groupToggle mr-2" data-group="glaze" checked>Glaze</label>
+            <label><input type="checkbox" class="groupToggle mr-2" data-group="kiln_recipe" checked>Kiln Recipe</label>
+            <label><input type="checkbox" class="groupToggle mr-2" data-group="kiln_actual" checked>Kiln Actual</label>
+            <label><input type="checkbox" class="groupToggle mr-2" data-group="delta" checked>Delta</label>
+            <label><input type="checkbox" class="groupToggle mr-2" data-group="kiln" checked>Kiln Out</label>
+            <label><input type="checkbox" class="groupToggle mr-2" data-group="sort" checked>Sort</label>
           </div>
         </section>
 
@@ -145,6 +130,7 @@
             </div>
           </div>
         </section>
+
         <p id="warnMissing" class="mt-3 text-sm text-amber-700"></p>
       </div>
     </main>
@@ -152,64 +138,67 @@
 
   <script>
 const COLS = [
-  {
-    group: 'meta', label: 'Meta',
-    cols: [
-      { key: 'datetime', label: 'Datetime', type: 'string', width: 'w-[180px]' },
-      { key: 'recipe_id', label: 'Recipe ID', type: 'number', width: 'w-[90px]' },
-      { key: 'gloss_type', label: 'Gloss Type', type: 'string', width: 'w-[130px]' },
-      { key: 'gloss_amount_target_g_per_tile', label: 'Gloss Target (g/tile)', type: 'number', width: 'w-[160px]' },
-    ]
-  },
-  { group: 'start', label: 'Start', cols: [{ key: 'vol_start', label: 'Start ft²', type: 'number', width: 'w-[120px]' }] },
+  { group: 'meta', label: 'Meta', cols: [
+      { key: 'datetime', label: 'Datetime' },
+      { key: 'recipe_id', label: 'Recipe ID' },
+      { key: 'gloss_type', label: 'Gloss Type' },
+      { key: 'gloss_amount_target_g_per_tile', label: 'Gloss Target (g/tile)' },
+    ]},
+  { group: 'start', label: 'Start', cols: [{ key: 'vol_start', label: 'Start ft²' }]},
   { group: 'press', label: 'Press', cols: [
-      { key: 'vol_press_out', label: 'Press Out ft²', type: 'number', width: 'w-[140px]' },
-      { key: 'target_pressure', label: 'Target Pressure', type: 'number', width: 'w-[130px]' },
-      { key: 'actual_pressure', label: 'Actual Pressure', type: 'number', width: 'w-[130px]' },
-      { key: 'layers_tossed', label: 'Layers Tossed', type: 'number', width: 'w-[120px]' },
-      { key: 'desired_thickness', label: 'Desired Thickness (mm)', type: 'number', width: 'w-[160px]' },
-    ]
-  },
-  { group: 'glaze', label: 'Glaze', cols: [{ key: 'vol_glaze_out', label: 'Glaze Out ft²', type: 'number', width: 'w-[140px]' }] },
+      { key: 'vol_press_out', label: 'Press Out ft²' },
+      { key: 'target_pressure', label: 'Target Pressure' },
+      { key: 'actual_pressure', label: 'Actual Pressure' },
+      { key: 'layers_tossed', label: 'Layers Tossed' },
+      { key: 'desired_thickness', label: 'Desired Thickness (mm)' },
+    ]},
+  { group: 'glaze', label: 'Glaze', cols: [{ key: 'vol_glaze_out', label: 'Glaze Out ft²' }]},
   { group: 'kiln_recipe', label: 'Recipe / Targets', cols: [
-      { key: 'recipe_air_cooling', label: 'Recipe Air Cooling', type: 'number' },
-      { key: 'recipe_moisture', label: 'Recipe Moisture', type: 'number' },
-      { key: 'recipe_air_flow', label: 'Recipe Air Flow', type: 'number' },
-      { key: 'recipe_max_temp', label: 'Recipe Max Temp (°C)', type: 'number' },
-      { key: 'recipe_humidity', label: 'Recipe Humidity %', type: 'number' },
-    ]
-  },
+      { key: 'recipe_air_cooling', label: 'Recipe Air Cooling' },
+      { key: 'recipe_moisture', label: 'Recipe Moisture' },
+      { key: 'recipe_air_flow', label: 'Recipe Air Flow' },
+      { key: 'recipe_max_temp', label: 'Recipe Max Temp (°C)' },
+      { key: 'recipe_humidity', label: 'Recipe Humidity %' },
+    ]},
   { group: 'kiln_actual', label: 'Kiln Actuals', cols: [
-      { key: 'kiln_air_cooling', label: 'Kiln Air Cooling', type: 'number' },
-      { key: 'kiln_moisture', label: 'Kiln Moisture', type: 'number' },
-      { key: 'kiln_air_flow', label: 'Kiln Air Flow', type: 'number' },
-      { key: 'kiln_max_temp', label: 'Kiln Max Temp (°C)', type: 'number' },
-      { key: 'kiln_humidity', label: 'Kiln Humidity %', type: 'number' },
-    ]
-  },
+      { key: 'kiln_air_cooling', label: 'Kiln Air Cooling' },
+      { key: 'kiln_moisture', label: 'Kiln Moisture' },
+      { key: 'kiln_air_flow', label: 'Kiln Air Flow' },
+      { key: 'kiln_max_temp', label: 'Kiln Max Temp (°C)' },
+      { key: 'kiln_humidity', label: 'Kiln Humidity %' },
+    ]},
   { group: 'delta', label: 'Delta vs Recipe', cols: [
-      { key: 'delta_air_cooling', label: 'Δ Air Cooling', type: 'number' },
-      { key: 'delta_moisture', label: 'Δ Moisture', type: 'number' },
-      { key: 'delta_air_flow', label: 'Δ Air Flow', type: 'number' },
-      { key: 'delta_max_temp', label: 'Δ Max Temp (°C)', type: 'number' },
-      { key: 'delta_humidity', label: 'Δ Humidity %', type: 'number' },
-    ]
-  },
-  { group: 'kiln', label: 'Kiln Output', cols: [{ key: 'vol_kiln_out', label: 'Kiln Out ft²', type: 'number' }] },
-  { group: 'sort', label: 'Sort', cols: [{ key: 'vol_sort_out', label: 'Sort Out ft²', type: 'number' }] },
+      { key: 'delta_air_cooling', label: 'Δ Air Cooling' },
+      { key: 'delta_moisture', label: 'Δ Moisture' },
+      { key: 'delta_air_flow', label: 'Δ Air Flow' },
+      { key: 'delta_max_temp', label: 'Δ Max Temp (°C)' },
+      { key: 'delta_humidity', label: 'Δ Humidity %' },
+    ]},
+  { group: 'kiln', label: 'Kiln Output', cols: [{ key: 'vol_kiln_out', label: 'Kiln Out ft²' }]},
+  { group: 'sort', label: 'Sort', cols: [{ key: 'vol_sort_out', label: 'Sort Out ft²' }]},
   { group: 'loss_yield', label: 'Loss / Yield', cols: [
-      { key: 'loss_press', label: 'Loss Press %', type: 'number' },
-      { key: 'loss_glaze', label: 'Loss Glaze %', type: 'number' },
-      { key: 'loss_kiln', label: 'Loss Kiln %', type: 'number' },
-      { key: 'loss_sort', label: 'Loss Sort %', type: 'number' },
-      { key: 'yield_total', label: 'Yield Total %', type: 'number' },
-      { key: 'yield_total_target', label: 'Yield Target %', type: 'number' },
-    ]
-  },
+      { key: 'loss_press', label: 'Loss Press %' },
+      { key: 'loss_glaze', label: 'Loss Glaze %' },
+      { key: 'loss_kiln', label: 'Loss Kiln %' },
+      { key: 'loss_sort', label: 'Loss Sort %' },
+      { key: 'yield_total', label: 'Yield Total %' },
+      { key: 'yield_total_target', label: 'Yield Target %' },
+    ]},
 ];
 
     // visible group state
-    const groupVisible = { meta:true, start:true, press:true, glaze:true, kiln:true, sort:true };
+const groupVisible = {
+  meta:true,
+  start:true,
+  press:true,
+  glaze:true,
+  kiln_recipe:true,
+  kiln_actual:true,
+  delta:true,
+  kiln:true,
+  sort:true,
+  loss_yield:false
+};
 
     // ---------------- Utilities ----------------
     const $ = (id) => document.getElementById(id);

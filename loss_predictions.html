@@ -72,23 +72,14 @@
                 </details>
               </div>
               <div class="flex items-center gap-3">
-                <!-- Two buttons: Good & Bad -->
-                <button
-                  id="btnGood"
-                  class="px-3 py-2 rounded bg-pbBlue text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled
-                >
-                  Complete Good Cycle
-                </button>
-
-                <button
-                  id="btnBad"
-                  class="px-3 py-2 rounded bg-pbBlue text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled
-                >
-                  Complete Bad Cycle
-                </button>
-              </div>
+  <button
+    id="btnRun"
+    class="px-3 py-2 rounded bg-pbBlue text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled
+  >
+    Run Cycle
+  </button>
+</div>
             </div>
           </section>
 
@@ -655,15 +646,12 @@ def predict(payload):
     pyodide.FS.writeFile(MODEL_PATH,new Uint8Array(buf));
     await pyodide.runPythonAsync(`load_model("${MODEL_PATH}")`);
     modelLoaded=true; $('statusText').textContent='Model loaded';
-    $('btnGood').disabled = false;
-    $('btnBad').disabled = false;
 
-    document.getElementById('btnGood').disabled = false;
-    document.getElementById('btnBad').disabled = false;
+$('btnRun').disabled = false;
+document.getElementById('btnRun').addEventListener('click', onGenerate);
 
     // Attach click events so they actually trigger predictions
-    document.getElementById('btnGood').addEventListener('click', onGenerate);
-    document.getElementById('btnBad').addEventListener('click', onGenerate);
+    document.getElementById('btnRun').addEventListener('click', onGenerate);
 
     // Enable the run button now that we're ready
     const runBtn = $('btnExample');
