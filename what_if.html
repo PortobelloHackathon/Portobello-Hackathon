@@ -712,8 +712,13 @@ async function runWF(){
 $('wfRun').addEventListener('click', runWF);
 
 // auto-run on input changes (debounced)
-let runTimer=null;
-function debouncedRun() { /* no auto-predict */ }
+let runTimer = null;
+function debouncedRun(delay = 300) {
+  clearTimeout(runTimer);
+  runTimer = setTimeout(() => {
+    runWF();
+  }, delay);
+}
 
 /* ===================== AI INSIGHTS ===================== */
 function stageLosses(vols){
