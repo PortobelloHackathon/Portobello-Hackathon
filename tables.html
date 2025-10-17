@@ -17,11 +17,11 @@
         extend: {
           fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
           colors: {
-            pbBlue: '#0B1F52',       // brand dark blue
+            pbBlue: '#0B1F52',
             pbSlate: '#6B7280',
             pbGrayLight: '#CFD3DA',
-            pbGrayMid:   '#7C8390',
-            pbGrayDark:  '#434A52'
+            pbGrayMid: '#7C8390',
+            pbGrayDark: '#434A52'
           }
         }
       }
@@ -33,33 +33,18 @@
   <!-- HEADER -->
   <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
     <div class="relative w-full py-5 pl-3 flex items-center">
-      <!-- Left: Logo with tiny left padding -->
-      <a href="http://127.0.0.1:5500/loss_predictions.html" class="shrink-0">
-
-        <img
-          src="assets/images/logo_portobello_america_CORES_pantone_655.png"
-          alt="Portobello America"
-          class="h-16 w-auto object-contain block"
-        />
+      <a href="/" class="shrink-0">
+        <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-16 w-auto object-contain block" />
       </a>
-
-      <!-- Center: Title (stays perfectly centered regardless of logo width) -->
-      <h1
-        class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none"
-      >
+      <h1 class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none">
         Tile Material Dashboard
       </h1>
-
-      <!-- Right: Spacer for symmetry / future actions -->
       <div class="ml-auto"></div>
     </div>
   </header>
 
   <div class="flex flex-1 overflow-hidden">
-    <!-- Sidebar -->
     <script src="sidebar.js" defer></script>
-
-    <!-- MAIN -->
     <main class="flex-1 overflow-auto">
       <div class="mx-auto max-w-[1400px] px-6 md:px-8 py-8">
         <div class="flex items-center justify-between">
@@ -67,24 +52,19 @@
           <div id="dataStatus" class="text-sm text-slate-500"></div>
         </div>
 
-        <!-- FILTERS / CONTROLS -->
+        <!-- FILTERS -->
         <section class="mt-5 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
           <div class="flex flex-wrap gap-3 items-end">
-            <!-- Global search -->
             <div>
               <label class="block text-xs text-slate-600 mb-1">Search</label>
               <input id="q" type="text" placeholder="Find in any column…" class="border rounded p-2 w-64" />
             </div>
-
-            <!-- Recipe filter -->
             <div>
               <label class="block text-xs text-slate-600 mb-1">Recipe</label>
               <select id="fRecipe" class="border rounded p-2 w-44 bg-white">
                 <option value="">All recipes</option>
               </select>
             </div>
-
-            <!-- Stage completeness filter -->
             <div>
               <label class="block text-xs text-slate-600 mb-1">Known up to</label>
               <select id="fStage" class="border rounded p-2 w-48 bg-white">
@@ -96,8 +76,6 @@
                 <option value="sort">Full (Includes Sort)</option>
               </select>
             </div>
-
-            <!-- Datetime filter (range) -->
             <div>
               <label class="block text-xs text-slate-600 mb-1">Datetime</label>
               <div class="flex gap-1">
@@ -106,8 +84,6 @@
                 <input id="fDatetimeEnd" type="datetime-local" class="border rounded p-2 w-36" placeholder="To" />
               </div>
             </div>
-
-            <!-- Page size -->
             <div>
               <label class="block text-xs text-slate-600 mb-1">Rows per page</label>
               <select id="pageSize" class="border rounded p-2 w-36 bg-white">
@@ -117,15 +93,12 @@
                 <option>100</option>
               </select>
             </div>
-
-            <!-- Export -->
             <div class="ml-auto flex gap-2">
               <button id="btnResetFilters" class="px-3 py-2 rounded border">Reset filters</button>
               <button id="btnExport" class="px-3 py-2 rounded bg-pbBlue text-white">Export filtered CSV</button>
             </div>
           </div>
 
-          <!-- Column group toggles -->
           <div class="mt-4 border-t pt-3">
             <span class="text-xs text-slate-600 mr-3">Column groups:</span>
             <label class="inline-flex items-center mr-4 text-sm">
@@ -146,6 +119,9 @@
             <label class="inline-flex items-center mr-4 text-sm">
               <input type="checkbox" class="groupToggle mr-2" data-group="sort" checked /> Sort
             </label>
+            <label class="inline-flex items-center mr-4 text-sm">
+              <input type="checkbox" class="groupToggle mr-2" data-group="loss_yield" checked /> Loss / Yield
+            </label>
           </div>
         </section>
 
@@ -154,24 +130,13 @@
           <div class="overflow-auto">
             <table class="w-full text-sm">
               <thead class="sticky top-0 z-10 bg-slate-50 text-slate-700">
-                <!-- Group row -->
-                <tr id="theadGroups" class="border-b">
-                  <!-- dynamically filled -->
-                </tr>
-                <!-- Column row -->
-                <tr id="theadCols" class="border-b">
-                  <!-- dynamically filled -->
-                </tr>
-                <!-- Filter row (column-specific text filters) -->
-                <tr id="theadFilters" class="bg-white/70">
-                  <!-- dynamically filled -->
-                </tr>
+                <tr id="theadGroups" class="border-b"></tr>
+                <tr id="theadCols" class="border-b"></tr>
+                <tr id="theadFilters" class="bg-white/70"></tr>
               </thead>
               <tbody id="dataTableBody"></tbody>
             </table>
           </div>
-
-          <!-- Pagination -->
           <div class="flex items-center justify-between px-4 py-3 border-t bg-white">
             <div id="pageInfo" class="text-sm text-slate-600"></div>
             <div class="flex gap-2">
@@ -180,19 +145,15 @@
             </div>
           </div>
         </section>
-
-        <!-- Warnings -->
         <p id="warnMissing" class="mt-3 text-sm text-amber-700"></p>
       </div>
     </main>
   </div>
 
   <script>
-    // ---------------- Config: column groups & columns ----------------
 const COLS = [
   {
-    group: 'meta',
-    label: 'Meta',
+    group: 'meta', label: 'Meta',
     cols: [
       { key: 'datetime', label: 'Datetime', type: 'string', width: 'w-[180px]' },
       { key: 'recipe_id', label: 'Recipe ID', type: 'number', width: 'w-[90px]' },
@@ -200,17 +161,8 @@ const COLS = [
       { key: 'gloss_amount_target_g_per_tile', label: 'Gloss Target (g/tile)', type: 'number', width: 'w-[160px]' },
     ]
   },
-  {
-    group: 'start',
-    label: 'Start',
-    cols: [
-      { key: 'vol_start', label: 'Start ft²', type: 'number', width: 'w-[120px]' },
-    ]
-  },
-  {
-    group: 'press',
-    label: 'Press',
-    cols: [
+  { group: 'start', label: 'Start', cols: [{ key: 'vol_start', label: 'Start ft²', type: 'number', width: 'w-[120px]' }] },
+  { group: 'press', label: 'Press', cols: [
       { key: 'vol_press_out', label: 'Press Out ft²', type: 'number', width: 'w-[140px]' },
       { key: 'target_pressure', label: 'Target Pressure', type: 'number', width: 'w-[130px]' },
       { key: 'actual_pressure', label: 'Actual Pressure', type: 'number', width: 'w-[130px]' },
@@ -218,58 +170,40 @@ const COLS = [
       { key: 'desired_thickness', label: 'Desired Thickness (mm)', type: 'number', width: 'w-[160px]' },
     ]
   },
-  {
-    group: 'glaze',
-    label: 'Glaze',
-    cols: [
-      { key: 'vol_glaze_out', label: 'Glaze Out ft²', type: 'number', width: 'w-[140px]' },
+  { group: 'glaze', label: 'Glaze', cols: [{ key: 'vol_glaze_out', label: 'Glaze Out ft²', type: 'number', width: 'w-[140px]' }] },
+  { group: 'kiln_recipe', label: 'Recipe / Targets', cols: [
+      { key: 'recipe_air_cooling', label: 'Recipe Air Cooling', type: 'number' },
+      { key: 'recipe_moisture', label: 'Recipe Moisture', type: 'number' },
+      { key: 'recipe_air_flow', label: 'Recipe Air Flow', type: 'number' },
+      { key: 'recipe_max_temp', label: 'Recipe Max Temp (°C)', type: 'number' },
+      { key: 'recipe_humidity', label: 'Recipe Humidity %', type: 'number' },
     ]
   },
-  {
-    group: 'kiln_recipe',
-    label: 'Recipe / Targets',
-    cols: [
-      { key: 'recipe_air_cooling', label: 'Recipe Air Cooling', type: 'number', width: 'w-[140px]' },
-      { key: 'recipe_moisture', label: 'Recipe Moisture', type: 'number', width: 'w-[130px]' },
-      { key: 'recipe_air_flow', label: 'Recipe Air Flow', type: 'number', width: 'w-[130px]' },
-      { key: 'recipe_max_temp', label: 'Recipe Max Temp (°C)', type: 'number', width: 'w-[150px]' },
-      { key: 'recipe_humidity', label: 'Recipe Humidity %', type: 'number', width: 'w-[140px]' },
+  { group: 'kiln_actual', label: 'Kiln Actuals', cols: [
+      { key: 'kiln_air_cooling', label: 'Kiln Air Cooling', type: 'number' },
+      { key: 'kiln_moisture', label: 'Kiln Moisture', type: 'number' },
+      { key: 'kiln_air_flow', label: 'Kiln Air Flow', type: 'number' },
+      { key: 'kiln_max_temp', label: 'Kiln Max Temp (°C)', type: 'number' },
+      { key: 'kiln_humidity', label: 'Kiln Humidity %', type: 'number' },
     ]
   },
-  {
-    group: 'kiln_actual',
-    label: 'Kiln Actuals',
-    cols: [
-      { key: 'kiln_air_cooling', label: 'Kiln Air Cooling', type: 'number', width: 'w-[130px]' },
-      { key: 'kiln_moisture', label: 'Kiln Moisture', type: 'number', width: 'w-[130px]' },
-      { key: 'kiln_air_flow', label: 'Kiln Air Flow', type: 'number', width: 'w-[130px]' },
-      { key: 'kiln_max_temp', label: 'Kiln Max Temp (°C)', type: 'number', width: 'w-[150px]' },
-      { key: 'kiln_humidity', label: 'Kiln Humidity %', type: 'number', width: 'w-[140px]' },
+  { group: 'delta', label: 'Delta vs Recipe', cols: [
+      { key: 'delta_air_cooling', label: 'Δ Air Cooling', type: 'number' },
+      { key: 'delta_moisture', label: 'Δ Moisture', type: 'number' },
+      { key: 'delta_air_flow', label: 'Δ Air Flow', type: 'number' },
+      { key: 'delta_max_temp', label: 'Δ Max Temp (°C)', type: 'number' },
+      { key: 'delta_humidity', label: 'Δ Humidity %', type: 'number' },
     ]
   },
-  {
-    group: 'delta',
-    label: 'Delta vs Recipe',
-    cols: [
-      { key: 'delta_air_cooling', label: 'Δ Air Cooling', type: 'number', width: 'w-[120px]' },
-      { key: 'delta_moisture', label: 'Δ Moisture', type: 'number', width: 'w-[120px]' },
-      { key: 'delta_air_flow', label: 'Δ Air Flow', type: 'number', width: 'w-[120px]' },
-      { key: 'delta_max_temp', label: 'Δ Max Temp (°C)', type: 'number', width: 'w-[140px]' },
-      { key: 'delta_humidity', label: 'Δ Humidity %', type: 'number', width: 'w-[140px]' },
-    ]
-  },
-  {
-    group: 'kiln',
-    label: 'Kiln Output',
-    cols: [
-      { key: 'vol_kiln_out', label: 'Kiln Out ft²', type: 'number', width: 'w-[130px]' },
-    ]
-  },
-  {
-    group: 'sort',
-    label: 'Sort',
-    cols: [
-      { key: 'vol_sort_out', label: 'Sort Out ft²', type: 'number', width: 'w-[130px]' },
+  { group: 'kiln', label: 'Kiln Output', cols: [{ key: 'vol_kiln_out', label: 'Kiln Out ft²', type: 'number' }] },
+  { group: 'sort', label: 'Sort', cols: [{ key: 'vol_sort_out', label: 'Sort Out ft²', type: 'number' }] },
+  { group: 'loss_yield', label: 'Loss / Yield', cols: [
+      { key: 'loss_press', label: 'Loss Press %', type: 'number' },
+      { key: 'loss_glaze', label: 'Loss Glaze %', type: 'number' },
+      { key: 'loss_kiln', label: 'Loss Kiln %', type: 'number' },
+      { key: 'loss_sort', label: 'Loss Sort %', type: 'number' },
+      { key: 'yield_total', label: 'Yield Total %', type: 'number' },
+      { key: 'yield_total_target', label: 'Yield Target %', type: 'number' },
     ]
   },
 ];
