@@ -72,61 +72,6 @@
         <section id="panel-predictions">
           <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Predictions</h2>
 
-          <!-- ======== STAGE TAB CONTROL ======== -->
-          <section id="stage-tab-control" class="mt-5 mb-6">
-            <div class="flex flex-row gap-2">
-              <button
-                type="button"
-                class="stage-tab px-4 py-2 rounded-t-lg border-b-4 border-transparent text-sm font-medium bg-white text-pbBlue hover:bg-slate-100 transition"
-                data-stage="Start"
-                id="stageTabStart"
-              >
-                Start
-                <span class="ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold"
-                      id="stageStatusStart">—</span>
-              </button>
-              <button
-                type="button"
-                class="stage-tab px-4 py-2 rounded-t-lg border-b-4 border-transparent text-sm font-medium bg-white text-pbBlue hover:bg-slate-100 transition"
-                data-stage="Press"
-                id="stageTabPress"
-              >
-                Press
-                <span class="ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold"
-                      id="stageStatusPress">—</span>
-              </button>
-              <button
-                type="button"
-                class="stage-tab px-4 py-2 rounded-t-lg border-b-4 border-transparent text-sm font-medium bg-white text-pbBlue hover:bg-slate-100 transition"
-                data-stage="Glaze"
-                id="stageTabGlaze"
-              >
-                Glaze
-                <span class="ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold"
-                      id="stageStatusGlaze">—</span>
-              </button>
-              <button
-                type="button"
-                class="stage-tab px-4 py-2 rounded-t-lg border-b-4 border-transparent text-sm font-medium bg-white text-pbBlue hover:bg-slate-100 transition"
-                data-stage="Kiln"
-                id="stageTabKiln"
-              >
-                Kiln
-                <span class="ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold"
-                      id="stageStatusKiln">—</span>
-              </button>
-              <button
-                type="button"
-                class="stage-tab px-4 py-2 rounded-t-lg border-b-4 border-transparent text-sm font-medium bg-white text-pbBlue hover:bg-slate-100 transition"
-                data-stage="Sort"
-                id="stageTabSort"
-              >
-                Sort
-                <span class="ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold"
-                      id="stageStatusSort">—</span>
-              </button>
-            </div>
-          </section>
 
           <!-- TOP STATUS -->
           <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
@@ -254,60 +199,45 @@
               </div>
             </div>
           </section>
+<!-- (…your existing <head> and body header/sidebar unchanged…) -->
 
-          <!-- CHART -->
-          <div class="mt-6 grid grid-cols-12 gap-4">
-            <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[24rem]">
-              <div class="flex items-center justify-between mb-2">
-                <h3 class="text-lg font-semibold text-slate-800">Material Loss Per Stage</h3>
-                <div class="flex items-center gap-3 text-xs text-slate-500">
-                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Actual</span>
-                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#F4B000"></span> Predicted</span>
-                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
-                </div>
-              </div>
-              <canvas id="lossLineChart" class="w-full h-full"></canvas>
-            </section>
-          </div>
-        </section>
-
-        <!-- ======== PANEL: ANALYTICS (placeholder) ======== -->
-        <section id="panel-analytics" class="hidden">
-          <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Analytics</h2>
-          <section class="mt-5 rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
-            <p class="text-slate-600">Analytics content goes here.</p>
-          </section>
-        </section>
-
-        <!-- ======== PANEL: DATA (placeholder) ======== -->
-        <section id="panel-data" class="hidden">
-          <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Data</h2>
-          <section class="mt-5 rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
-            <p class="text-slate-600">Data tools go here.</p>
-          </section>
-        </section>
+<!-- CHART -->
+<div class="mt-6 grid grid-cols-12 gap-4">
+  <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[24rem]">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-lg font-semibold text-slate-800">Material Loss Per Stage</h3>
+      <div class="flex items-center gap-3 text-xs text-slate-500">
+        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Actual</span>
+        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#F4B000"></span> Predicted</span>
+        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
       </div>
-    </main>
+    </div>
+    <canvas id="lossLineChart" class="w-full h-full"></canvas>
+  </section>
+</div>
+
+<!-- NEW: Flags panel -->
+<section id="flagsPanel" class="mt-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 hidden">
+  <div class="flex items-center justify-between">
+    <h3 class="text-lg font-semibold text-slate-800">Stage Flags</h3>
+    <span id="flagBadge" class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 font-semibold hidden">Flags: 0</span>
   </div>
+  <ul id="flagList" class="mt-2 list-disc pl-6 text-sm text-red-700"></ul>
+</section>
 
 <script>
-  // ---------- Sidebar tab logic ----------
+  // ---------- Tab logic (unchanged) ----------
   const tabButtons = document.querySelectorAll('.tablink');
   const panels = {
     predictions: document.getElementById('panel-predictions'),
     analytics:   document.getElementById('panel-analytics'),
     data:        document.getElementById('panel-data'),
   };
-
   function setActiveTab(nameRaw){
     const name = (nameRaw || 'predictions').toLowerCase();
     const panel = panels[name] || panels['predictions'];
-
-    // show/hide panels
     Object.values(panels).forEach(p => p && p.classList.add('hidden'));
     if (panel) panel.classList.remove('hidden');
-
-    // button styles
     tabButtons.forEach(btn => {
       const isActive = (btn.dataset.tab || '').toLowerCase() === name;
       btn.className = 'tablink flex items-center px-5 py-3 rounded-r-full mb-2 transition ' +
@@ -316,154 +246,21 @@
       if (isActive) btn.setAttribute('aria-current','page'); else btn.removeAttribute('aria-current');
     });
   }
-
   tabButtons.forEach(btn => btn.addEventListener('click', () => setActiveTab(btn.dataset.tab)));
   setActiveTab('predictions');
 
-  // ---------- Stage Tab Control ----------
-  // Track active stage and running/idle status
+  // ---------- Stages + chart ----------
   const STAGES = ['Start','Press','Glaze','Kiln','Sort'];
-  let activeStage = 'Start';
-  // Running/idle status: can be set to 'running' or 'idle'
-  let stageRunStatus = {
-    Start: 'idle',
-    Press: 'idle',
-    Glaze: 'idle',
-    Kiln: 'idle',
-    Sort: 'idle'
-  };
-  // Store example data for each running stage (global)
-  let stageExamples = {};
+  const $ = (id) => document.getElementById(id);
 
-  function setActiveStage(stage) {
-    activeStage = stage;
-    // Highlight the active tab
-    STAGES.forEach(s => {
-      const tab = document.getElementById('stageTab' + s);
-      if (!tab) return;
-      if (s === stage) {
-        tab.classList.add('border-pbBlue', 'bg-pbBlue', 'text-white', 'shadow');
-        tab.classList.remove('border-transparent', 'bg-white', 'text-pbBlue');
-        tab.setAttribute('aria-current', 'stage');
-      } else {
-        tab.classList.remove('border-pbBlue', 'bg-pbBlue', 'text-white', 'shadow');
-        tab.classList.add('border-transparent', 'bg-white', 'text-pbBlue');
-        tab.removeAttribute('aria-current');
-      }
-    });
-    updateStageTabStates();
-    // If this stage is a running stage and has example data, populate inputs from that example
-    if (stageExamples && stageExamples[stage]) {
-      // Set all input values from saved example for this stage
-      const example = stageExamples[stage];
-      fields.forEach(f => setVal(f, example[f]));
-      // After setting, re-predict so chart and badges update
-      predictNow();
-    }
-  }
-
-  // Set status badge for each stage and update tab enabled/disabled state
-  function updateStageRunStatus() {
-    STAGES.forEach(s => {
-      const badge = document.getElementById('stageStatus'+s);
-      let status = stageRunStatus[s];
-      if (!badge) return;
-      if (status === 'running') {
-        badge.textContent = 'Running';
-        badge.className = 'ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold bg-green-100 text-green-800';
-      } else if (status === 'idle' || status == null) {
-        badge.textContent = '—';
-        badge.className = 'ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold bg-slate-100 text-slate-700';
-      } else if (typeof status === 'number') {
-        badge.textContent = String(status);
-        badge.className = 'ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold bg-amber-100 text-amber-800';
-      } else {
-        badge.textContent = String(status);
-        badge.className = 'ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold bg-slate-100 text-slate-700';
-      }
-    });
-    updateStageTabStates();
-  }
-
-  // Only running stages are enabled/selectable, all others are fully disabled
-  function updateStageTabStates() {
-    STAGES.forEach((s, i) => {
-      const tab = document.getElementById('stageTab' + s);
-      if (!tab) return;
-      let enable = (stageRunStatus[s] === 'running');
-      if (enable) {
-        tab.disabled = false;
-        tab.classList.remove('opacity-50','pointer-events-none','cursor-not-allowed');
-      } else {
-        tab.disabled = true;
-        tab.classList.add('opacity-50','pointer-events-none','cursor-not-allowed');
-      }
-    });
-  }
-
-  // Add event listeners for stage tabs
-  window.addEventListener('DOMContentLoaded', () => {
-    STAGES.forEach(s => {
-      const tab = document.getElementById('stageTab' + s);
-      if (tab) {
-        tab.addEventListener('click', (e) => {
-          // Only allow click if this stage is "running"
-          if (tab.disabled) {
-            // Briefly flash to show disabled
-            tab.classList.add('ring-2','ring-red-400');
-            setTimeout(()=>tab.classList.remove('ring-2','ring-red-400'),250);
-            e.preventDefault();
-            return;
-          }
-          setActiveStage(s);
-        });
-      }
-    });
-    // Set default active stage and update badges
-    setActiveStage(activeStage);
-    updateStageRunStatus();
-  });
-
-  // ---------- Colors / Chart defaults ----------
-  const PB_GRAY_D = '#434A52', PB_GRAY_L='#CFD3DA';
-  const ACTUAL = '#16A34A', PRED='#F4B000', FUTURE='#0B1F52';
-
-  Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-  Chart.defaults.color = PB_GRAY_D;
-  Chart.defaults.plugins.legend.display = false;
-
-  // Helpers
-  const $ = id => document.getElementById(id);
-  // Updated fields for new model schema
+  // fields we read for payload
   const fields = [
-    'datetime',
-    'recipe_id',
-    'gloss_type',
-    'gloss_amount_target_g_per_tile',
-    'vol_start',
-    'vol_press_out',
-    'vol_glaze_out',
-    'vol_kiln_out',
-    'vol_sort_out',
-    'target_pressure',
-    'actual_pressure',
-    'layers_tossed',
-    'desired_thickness',
-    'recipe_air_cooling',
-    'recipe_moisture',
-    'recipe_air_flow',
-    'recipe_max_temp',
-    'recipe_humidity',
-    'kiln_air_cooling',
-    'kiln_moisture',
-    'kiln_air_flow',
-    'kiln_max_temp',
-    'kiln_humidity',
-    'delta_air_cooling',
-    'delta_moisture',
-    'delta_air_flow',
-    'delta_max_temp',
-    'delta_humidity'
+    'datetime','recipe_id','gloss_type','gloss_amount_target_g_per_tile',
+    'vol_start','vol_press_out','vol_glaze_out','vol_kiln_out','vol_sort_out',
+    'target_pressure','actual_pressure','layers_tossed','desired_thickness',
+    'recipe_air_cooling','recipe_moisture','recipe_air_flow','recipe_max_temp','recipe_humidity',
+    'kiln_air_cooling','kiln_moisture','kiln_air_flow','kiln_max_temp','kiln_humidity',
+    'delta_air_cooling','delta_moisture','delta_air_flow','delta_max_temp','delta_humidity'
   ];
   function setVal(id,v){
     const el = $(id);
@@ -475,15 +272,23 @@
     }
   }
   function logDebug(msg){
-    const el = document.getElementById('debugLog');
+    const el = $('debugLog');
+    if (!el) return;
     el.textContent += (typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2)) + '\n';
     el.scrollTop = el.scrollHeight;
   }
 
-  // ----- Line chart with tooltips (value + loss vs Start + min) -----
+  const PB_GRAY_L='#CFD3DA';
+  const ACTUAL = '#16A34A', PRED='#F4B000', FUTURE='#0B1F52', FLAG_RED='#ef4444';
+
+  Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+  Chart.defaults.color = '#434A52';
+  Chart.defaults.plugins.legend.display = false;
+
   let stageStatus = ['future','future','future','future','future'];
   let lastVols = [null,null,null,null,null];
   let lastMins = [null,null,null,null,null];
+
   function colorFor(i){ return stageStatus[i]==='actual'?ACTUAL:(stageStatus[i]==='pred'?PRED:FUTURE); }
   const fmt = n => (n==null||!isFinite(n)) ? '-' : n.toLocaleString();
 
@@ -492,7 +297,7 @@
     data:{
       labels: STAGES,
       datasets:[
-        { // Volume
+        { // Volume line
           label:'Volume',
           data:[null,null,null,null,null],
           borderWidth:2, tension:0.3, fill:false,
@@ -505,6 +310,15 @@
           data:[null,null,null,null,null],
           borderWidth:1.5, borderDash:[6,6],
           borderColor:PRED, pointRadius:0, tension:0.3, fill:false
+        },
+        { // NEW: Flag markers overlay
+          label:'Flags',
+          data:[null,null,null,null,null],
+          showLine:false,
+          pointRadius:7,
+          pointHoverRadius:8,
+          borderWidth:0,
+          pointBackgroundColor: FLAG_RED
         }
       ]
     },
@@ -512,7 +326,7 @@
       responsive:true, maintainAspectRatio:false,
       scales:{
         x:{ grid:{ display:false } },
-        y:{ beginAtZero:true, grid:{ color:PB_GRAY_L } }  // start at 0
+        y:{ beginAtZero:true, grid:{ color:PB_GRAY_L } }
       },
       plugins:{
         tooltip:{
@@ -528,7 +342,7 @@
                             : stageStatus[i]==='pred'   ? 'Predicted'
                             : 'Future';
               if(val==null) return 'No data';
-              return `Value: ${fmt(val)} ft² (${status})`;
+              return `Value: ${fmt(val)} (${status})`;
             },
             afterLabel:(item)=>{
               const i = item.dataIndex;
@@ -538,9 +352,9 @@
               if(start==null || val==null) return '';
               const loss  = Math.max(0, start - val);
               const pct   = start>0 ? (loss/start*100) : 0;
-              const lines = [`Loss vs Start: ${fmt(loss)} ft² (${pct.toFixed(2)}%)`];
+              const lines = [`Loss vs Start: ${fmt(loss)} (${pct.toFixed(2)}%)`];
               if(minV!=null && stageStatus[i]==='pred'){
-                lines.push(`Min Required: ${fmt(minV)} ft²`);
+                lines.push(`Min Required: ${fmt(minV)}`);
               }
               return '\n' + lines.join('\n');
             }
@@ -551,64 +365,155 @@
   });
 
   function updateChart(vols, mins, statuses){
-    // Remove any notion of "complete" status. Only "running" and "idle" exist.
-    // Mark all non-running stages as "idle".
-    // Find running stages (indices)
-    const runningIdxs = STAGES.map((s, i) => stageRunStatus[s] === 'running' ? i : -1).filter(i => i !== -1);
-    // If no running stages, fallback to first pred/actual, else 0
-    let fallbackIdx = STAGES.findIndex((s, i) => statuses[i] === 'pred' || statuses[i] === 'actual');
-    if (fallbackIdx === -1) fallbackIdx = 0;
-    // All stages not in runningIdxs are "idle"
-    // For chart status, just propagate actual/pred/future as before
     stageStatus = statuses.slice();
     lastVols = vols.slice();
     lastMins = mins.slice();
     lossLineChart.data.datasets[0].data = vols;
     lossLineChart.data.datasets[1].data = mins;
+    // flag overlay dataset will be set in renderFlags()
+    lossLineChart.data.datasets[2].data = [null,null,null,null,null];
     lossLineChart.update();
-    // Update stage run status indicators: only "running" for runningIdxs, "idle" for others
-    STAGES.forEach((s, i) => {
-      if (runningIdxs.includes(i)) {
-        stageRunStatus[s] = 'running';
-      } else {
-        stageRunStatus[s] = 'idle';
-      }
-    });
-    updateStageRunStatus();
   }
 
-  // Badges
+  // Badges (top of each card)
   function setBadges(states){
     const ids = ['badgeStart','badgePress','badgeGlaze','badgeKiln'];
     ids.forEach((id,i)=>{
+      const el = $(id);
+      if(!el) return;
       const st = states?states[i]:null;
       const txt = st?st:'blocked';
       const cls = st==='actual' ? 'bg-green-100 text-green-700'
                : st==='pred'   ? 'bg-amber-100 text-amber-700'
                : 'bg-slate-100 text-slate-600';
-      const el = document.getElementById(id);
-      el.textContent = txt; el.className = `text-xs px-2 py-0.5 rounded ${cls}`;
+      el.textContent = txt;
+      el.className = `text-xs px-2 py-0.5 rounded ${cls}`;
+      el.classList.remove('ring','ring-red-400');
     });
+  }
+
+  // NEW: thresholds & flag evaluation
+  const FLAG_THRESHOLDS = {
+    pressurePsi: 15,         // |actual - target| > 15 PSI → Press flag
+    deltaTempC: 5,           // |delta_max_temp| > 5°C → Kiln flag
+    humidityHigh: 8,         // kiln_humidity - recipe_humidity > 8 → Kiln flag
+    deltaMoisture: 0.05,     // |delta_moisture| > 0.05 → Kiln flag
+    deltaAirCooling: 1       // |delta_air_cooling| > 1 → Kiln flag
+  };
+
+  function num(x){
+    const n = Number(x);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function evaluateFlags(payload, vols, mins){
+    const flags = [];
+    // Helper to check actual vs predicted min for stage index i
+    function checkActualBelowMin(i, field, label){
+      const actual = num(payload[field]);
+      const minReq = mins[i] == null ? null : num(mins[i]);
+      if(actual != null && minReq != null && actual < minReq){
+        flags.push({ stageIdx:i, stage:STAGES[i], code:`${label}_below_min`, msg:`${label}: actual ${fmt(actual)} < min ${fmt(minReq)}`});
+      }
+    }
+
+    // PRESS
+    const ap = num(payload.actual_pressure), tp = num(payload.target_pressure);
+    if(ap!=null && tp!=null && Math.abs(ap - tp) > FLAG_THRESHOLDS.pressurePsi){
+      flags.push({ stageIdx:1, stage:'Press', code:'pressure_off', msg:`Press: |actual-target| = ${Math.abs(ap-tp).toFixed(0)} PSI > ${FLAG_THRESHOLDS.pressurePsi}`});
+    }
+    checkActualBelowMin(1, 'vol_press_out', 'Press output');
+
+    // GLAZE
+    checkActualBelowMin(2, 'vol_glaze_out', 'Glaze output');
+
+    // KILN (delta rules + min check)
+    const dTemp = num(payload.delta_max_temp);
+    if(dTemp!=null && Math.abs(dTemp) > FLAG_THRESHOLDS.deltaTempC){
+      flags.push({ stageIdx:3, stage:'Kiln', code:'temp_off', msg:`Kiln: |Δtemp| ${Math.abs(dTemp).toFixed(1)}°C > ${FLAG_THRESHOLDS.deltaTempC}°C`});
+    }
+    const dMoist = num(payload.delta_moisture);
+    if(dMoist!=null && Math.abs(dMoist) > FLAG_THRESHOLDS.deltaMoisture){
+      flags.push({ stageIdx:3, stage:'Kiln', code:'moist_off', msg:`Kiln: |Δmoisture| ${Math.abs(dMoist).toFixed(3)} > ${FLAG_THRESHOLDS.deltaMoisture}`});
+    }
+    const dCool = num(payload.delta_air_cooling);
+    if(dCool!=null && Math.abs(dCool) > FLAG_THRESHOLDS.deltaAirCooling){
+      flags.push({ stageIdx:3, stage:'Kiln', code:'cooling_off', msg:`Kiln: |Δair_cooling| ${Math.abs(dCool).toFixed(1)} > ${FLAG_THRESHOLDS.deltaAirCooling}`});
+    }
+    const recHum = num(payload.recipe_humidity), kilnHum = num(payload.kiln_humidity);
+    if(recHum!=null && kilnHum!=null && (kilnHum - recHum) > FLAG_THRESHOLDS.humidityHigh){
+      flags.push({ stageIdx:3, stage:'Kiln', code:'humidity_high', msg:`Kiln: humidity +${(kilnHum-recHum).toFixed(1)} > ${FLAG_THRESHOLDS.humidityHigh}`});
+    }
+    // airflow below setpoint
+    const recFlow = num(payload.recipe_air_flow), kilnFlow = num(payload.kiln_air_flow);
+    if(recFlow!=null && kilnFlow!=null && kilnFlow < recFlow){
+      flags.push({ stageIdx:3, stage:'Kiln', code:'airflow_low', msg:`Kiln: airflow ${kilnFlow} < recipe ${recFlow}`});
+    }
+    checkActualBelowMin(3, 'vol_kiln_out', 'Kiln output');
+
+    // SORT (actual vs min; and good_rate if both present)
+    checkActualBelowMin(4, 'vol_sort_out', 'Sort output');
+    const vk = num(payload.vol_kiln_out), vs = num(payload.vol_sort_out);
+    if(vk!=null && vs!=null){
+      const good = vk>0 ? vs/vk : null;
+      if(good!=null && good < 0.90){
+        flags.push({ stageIdx:4, stage:'Sort', code:'good_rate_low', msg:`Sort: good_rate ${(good*100).toFixed(1)}% < 90%`});
+      }
+    }
+
+    return flags;
+  }
+
+  function renderFlags(flags){
+    // reset flag styles
+    ['badgePress','badgeGlaze','badgeKiln'].forEach(id=>{
+      const el = $(id);
+      if(el) el.classList.remove('ring','ring-red-400');
+    });
+    $('flagList').innerHTML = '';
+    $('flagsPanel').classList.toggle('hidden', flags.length===0);
+    const badge = $('flagBadge');
+    if (badge){
+      if (flags.length>0){ badge.textContent = `Flags: ${flags.length}`; badge.classList.remove('hidden'); }
+      else { badge.classList.add('hidden'); }
+    }
+
+    // mark badges + list
+    const flaggedData = [null,null,null,null,null];
+    flags.forEach(f=>{
+      if (f.stageIdx>=1 && f.stageIdx<=3){
+        const map = ['badgeStart','badgePress','badgeGlaze','badgeKiln'];
+        const id = map[f.stageIdx];
+        const el = $(id);
+        if(el){ el.classList.add('ring','ring-red-400'); }
+      }
+      const li = document.createElement('li');
+      li.textContent = `${f.stage}: ${f.msg}`;
+      $('flagList').appendChild(li);
+
+      // put a red marker at the point (use lastVols so it lands exactly on current value)
+      const y = lastVols[f.stageIdx];
+      flaggedData[f.stageIdx] = (y==null ? null : y);
+    });
+
+    // update red flag markers on chart
+    lossLineChart.data.datasets[2].data = flaggedData;
+    lossLineChart.update();
   }
 
   function resetAll(){
     fields.forEach(f=> setVal(f,''));
     updateChart([null,null,null,null,null],[null,null,null,null,null],['future','future','future','future','future']);
     setBadges();
-    $('inputHint').textContent='Enter Start → add actuals or inputs to unlock predictions.';
-    // Reset stage tab to Start and all status to idle
-    activeStage = 'Start';
-    setActiveStage(activeStage);
-    STAGES.forEach(s => { stageRunStatus[s] = 'idle'; });
-    updateStageRunStatus();
-    // Clear example store
-    stageExamples = {};
+    $('inputHint').textContent='Pick a cycle, then add actuals to lock stages.';
+    $('flagsPanel').classList.add('hidden');
+    const badge = $('flagBadge'); if (badge) badge.classList.add('hidden');
   }
 
-  // ------------------- Pyodide + Auto-load model -------------------
+  // ------------------- Pyodide + Model (unchanged) -------------------
   let pyodide, modelLoaded = false;
-  const MODEL_PATH = '/tmp/ml_model.joblib';  // mounted copy in FS
-  const MODEL_URL  = 'ml_model.joblib';       // must exist next to this HTML
+  const MODEL_PATH = '/tmp/ml_model.joblib';
+  const MODEL_URL  = 'ml_model.joblib';
 
   async function initPy(){
     $('statusText').textContent = 'Loading Python…';
@@ -626,7 +531,6 @@ THRESH_MARGIN=0.03
 SORT_MIN=0.90
 SORT_DEFAULT=0.90
 SORT_MAX=0.92
-
 def load_model(path):
     global bundle, press_model, glaze_model, kiln_model, THRESH_MARGIN, SORT_MIN, SORT_DEFAULT, SORT_MAX, stage_features, recipe_setpoints
     bundle = joblib.load(path)
@@ -652,13 +556,11 @@ def load_model(path):
         }
         recipe_setpoints = {}
     return True
-
 def _sp_for(rid):
     try:
         return recipe_setpoints.get(int(rid), {})
     except Exception:
         return {}
-
 def _feature_row(feats, d, suppl=None):
     row={}
     src = dict(d)
@@ -681,15 +583,12 @@ def _feature_row(feats, d, suppl=None):
             continue
         row[f] = math.nan
     return row
-
 def _df_for(stage_key, d, suppl=None):
     feats = stage_features.get(stage_key, [])
     return pd.DataFrame([_feature_row(feats, d, suppl)])
-
 def _round0(x):
     try: return int(round(float(x)))
     except: return None
-
 def predict(payload):
     d = payload
     res = {
@@ -701,12 +600,10 @@ def predict(payload):
         "sort" :{"status":"blocked","amount":None,"min_required":None,"ratio":SORT_DEFAULT}
       }
     }
-    # START
     if d.get("vol_start") is None or (isinstance(d.get("vol_start"), float) and math.isnan(d.get("vol_start"))):
         return res
     start = float(d["vol_start"])
     res["stages"]["start"].update(status="actual", amount=_round0(start))
-
     # PRESS
     press_actual = d.get("vol_press_out")
     if press_actual is not None and not (isinstance(press_actual,float) and math.isnan(press_actual)):
@@ -720,7 +617,6 @@ def predict(payload):
         min_req = start * max(0.0, pr - THRESH_MARGIN)
         res["stages"]["press"].update(status="pred", amount=_round0(press_amt), min_required=_round0(min_req), ratio=pr)
         press_base = press_amt
-
     # GLAZE
     glaze_actual = d.get("vol_glaze_out")
     if glaze_actual is not None and not (isinstance(glaze_actual,float) and math.isnan(glaze_actual)):
@@ -734,7 +630,6 @@ def predict(payload):
         min_req = press_base * max(0.0, gr - THRESH_MARGIN)
         res["stages"]["glaze"].update(status="pred", amount=_round0(glaze_amt), min_required=_round0(min_req), ratio=gr)
         glaze_base = glaze_amt
-
     # KILN
     kiln_actual = d.get("vol_kiln_out")
     if kiln_actual is not None and not (isinstance(kiln_actual,float) and math.isnan(kiln_actual)):
@@ -748,8 +643,7 @@ def predict(payload):
         min_req = glaze_base * max(0.0, kr - THRESH_MARGIN)
         res["stages"]["kiln"].update(status="pred", amount=_round0(kiln_amt), min_required=_round0(min_req), ratio=kr)
         kiln_base = kiln_amt
-
-    # SORT (rule)
+    # SORT
     sr = float(SORT_DEFAULT)
     sort_amt = min(kiln_base * sr, kiln_base)
     min_req = kiln_base * max(SORT_MIN, sr - 0.02)
@@ -770,11 +664,9 @@ def predict(payload):
       const resp = await fetch(MODEL_URL, { cache: 'no-store' });
       if(!resp.ok) throw new Error('HTTP '+resp.status+' fetching '+MODEL_URL);
       const buf = await resp.arrayBuffer();
-
       try { pyodide.FS.mkdir('/tmp',{mode:0o777}); } catch(e){}
       try { pyodide.FS.unlink(MODEL_PATH); } catch(e){}
       pyodide.FS.writeFile(MODEL_PATH, new Uint8Array(buf));
-
       await pyodide.runPythonAsync(`load_model("${MODEL_PATH}")`);
       modelLoaded = true;
       $('statusText').textContent = 'Model loaded ✅ (ml_model.joblib)';
@@ -788,27 +680,21 @@ def predict(payload):
 
   async function predictNow(){
     if(!modelLoaded){ $('statusText').textContent = 'Model not loaded.'; return; }
-
-    // Dynamically collect all field values, convert numbers, leave strings as-is
+    // collect payload from inputs (already DB-filled by loss_predictions.js)
     const payload = {};
     fields.forEach(k => {
       const el = $(k);
       if (!el) { payload[k] = null; return; }
-      let val = el.value;
+      const val = el.value;
       if (val === '') { payload[k] = null; return; }
-      // Determine if field should be numeric
-      // If input type is number, or id starts with 'vol_' or is a known numeric field
-      if (
-        el.type === 'number' ||
-        [
-          'gloss_amount_target_g_per_tile',
-          'vol_start','vol_press_out','vol_glaze_out','vol_kiln_out','vol_sort_out',
-          'target_pressure','actual_pressure','layers_tossed','desired_thickness',
-          'recipe_air_cooling','recipe_moisture','recipe_air_flow','recipe_max_temp','recipe_humidity',
-          'kiln_air_cooling','kiln_moisture','kiln_air_flow','kiln_max_temp','kiln_humidity',
-          'delta_air_cooling','delta_moisture','delta_air_flow','delta_max_temp','delta_humidity'
-        ].includes(k)
-      ) {
+      const numericIds = new Set([
+        'gloss_amount_target_g_per_tile','vol_start','vol_press_out','vol_glaze_out','vol_kiln_out','vol_sort_out',
+        'target_pressure','actual_pressure','layers_tossed','desired_thickness',
+        'recipe_air_cooling','recipe_moisture','recipe_air_flow','recipe_max_temp','recipe_humidity',
+        'kiln_air_cooling','kiln_moisture','kiln_air_flow','kiln_max_temp','kiln_humidity',
+        'delta_air_cooling','delta_moisture','delta_air_flow','delta_max_temp','delta_humidity'
+      ]);
+      if (el.type === 'number' || numericIds.has(k)) {
         const n = Number(val);
         payload[k] = isNaN(n) ? null : n;
       } else {
@@ -838,183 +724,25 @@ def predict(payload):
 
     setBadges([statuses[0],statuses[1],statuses[2],statuses[3]]);
     updateChart(vols, mins, statuses);
-    // Optionally, set the active stage to the first predicted or actual stage
-    // but keep user selection unless you want to auto-advance.
 
-    const hints=[];
-    if(statuses[1]==='future') hints.push('Press needs target_pressure and/or actual Press output.');
-    if(statuses[2]==='future') hints.push('Glaze needs recipe_air_cooling/moisture/air_flow or actual Glaze output.');
-    if(statuses[3]==='future') hints.push('Kiln benefits from kiln temp/cooling/moisture/humidity/air settings — but will impute if missing.');
-    $('inputHint').textContent = hints.join(' ');
+    const flags = evaluateFlags(payload, vols, mins);
+    renderFlags(flags);
+
     $('statusText').textContent = 'Done.';
   }
 
-  // ---------- Example: multi-stage, each running stage gets its own example data ----------
-  function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
-  function randFloat(a,b){ return a + Math.random()*(b-a); }
-
-  function clearAll(){
-    fields.forEach(id=>setVal(id,''));
-  }
-
-  function loadExample() {
+  function resetBoot(){
     resetAll();
-    stageExamples = {};
+    initPy();
+  }
 
-    // Randomly select 2 running stages, ordered
-    const stageIndices = [...Array(STAGES.length).keys()];
-    stageIndices.sort(() => Math.random() - 0.5);
-    const runningIdxs = stageIndices.slice(0, 2).sort((a, b) => a - b);
-    const runningStages = runningIdxs.map(i => STAGES[i]);
-
-    // Generate shared random values for Start fields
-    const dt = new Date();
-    const ids = [241,244,245,246,247];
-    const rid = ids[Math.floor(Math.random()*ids.length)];
-    const start = randInt(56000, 90000);
-    const glossType = ['shiny','matte','satin'][randInt(0,2)];
-    const glossAmt = Number(randFloat(10, 25).toFixed(1));
-
-    // Generate values for each stage in order, to enable proper dependency
-    // Store intermediate values to allow correct propagation
-    let pressOut, glazeOut, kilnOut, sortOut;
-    let target_pressure, actual_pressure, layers_tossed, desired_thickness;
-    let recipe_air_cooling, recipe_moisture, recipe_air_flow, recipe_max_temp, recipe_humidity;
-    let kiln_air_cooling, kiln_moisture, kiln_air_flow, kiln_max_temp, kiln_humidity;
-    let delta_air_cooling, delta_moisture, delta_air_flow, delta_max_temp, delta_humidity;
-
-    // Compute all possible values up front for use in each running stage
-    pressOut = Math.round(start * randFloat(0.987, 0.994));
-    target_pressure = Math.round(randFloat(3000, 3200));
-    actual_pressure = Math.round(randFloat(2950, 3250));
-    layers_tossed = randInt(0, 2);
-    desired_thickness = Number(randFloat(7.5, 8.5).toFixed(2));
-
-    glazeOut = Math.round(pressOut * randFloat(0.988, 0.993));
-    recipe_air_cooling = Number(randFloat(4.5, 5.5).toFixed(2));
-    recipe_moisture = Number(randFloat(5.8, 6.2).toFixed(2));
-    recipe_air_flow = Number(randFloat(5.5, 6.5).toFixed(2));
-    recipe_max_temp = randInt(1190, 1200);
-    recipe_humidity = randInt(45, 55);
-
-    kilnOut = Math.round(glazeOut * randFloat(0.958, 0.969));
-    kiln_air_cooling = Number(randFloat(4.5, 5.5).toFixed(2));
-    kiln_moisture = Number(randFloat(5.8, 6.2).toFixed(2));
-    kiln_air_flow = Number(randFloat(5.5, 6.5).toFixed(2));
-    kiln_max_temp = randInt(1190, 1200);
-    kiln_humidity = randInt(45, 55);
-    delta_air_cooling = Number(randFloat(-0.5, 0.5).toFixed(2));
-    delta_moisture = Number(randFloat(-0.2, 0.2).toFixed(2));
-    delta_air_flow = Number(randFloat(-0.3, 0.3).toFixed(2));
-    delta_max_temp = Number(randFloat(-2, 2).toFixed(2));
-    delta_humidity = Number(randFloat(-5, 5).toFixed(2));
-
-    sortOut = Math.round(kilnOut * randFloat(0.89, 0.92));
-
-    // For each running stage, populate only the previous-stage fields
-    runningStages.forEach(stage => {
-      const stageIdx = STAGES.indexOf(stage);
-      const example = {};
-      // Start fields (always included)
-      example['datetime'] = dt.toISOString().slice(0,16);
-      example['recipe_id'] = rid;
-      example['gloss_type'] = glossType;
-      example['gloss_amount_target_g_per_tile'] = glossAmt;
-      example['vol_start'] = start;
-
-      // Press: only Start fields + Press input fields (NOT vol_press_out)
-      if (stageIdx >= 1) {
-        // Only populate input fields for Press stage, NOT output
-        // Do NOT include vol_press_out (own output) for Press
-        example['target_pressure'] = target_pressure;
-        example['actual_pressure'] = actual_pressure;
-        example['layers_tossed'] = layers_tossed;
-        example['desired_thickness'] = desired_thickness;
-      }
-      // Glaze: include Start + Press data, NOT Glaze output fields
-      if (stageIdx >= 2) {
-        // Populate Press output so Glaze can use it, but not Glaze output
-        example['vol_press_out'] = pressOut;
-        // Glaze input fields (NOT vol_glaze_out)
-        example['recipe_air_cooling'] = recipe_air_cooling;
-        example['recipe_moisture'] = recipe_moisture;
-        example['recipe_air_flow'] = recipe_air_flow;
-        example['recipe_max_temp'] = recipe_max_temp;
-        example['recipe_humidity'] = recipe_humidity;
-      }
-      // Kiln: include Start + Press + Glaze data, NOT Kiln output fields
-      if (stageIdx >= 3) {
-        // Populate Glaze output so Kiln can use it, but not Kiln output
-        example['vol_glaze_out'] = glazeOut;
-        // Kiln input fields (NOT vol_kiln_out)
-        example['kiln_air_cooling'] = kiln_air_cooling;
-        example['kiln_moisture'] = kiln_moisture;
-        example['kiln_air_flow'] = kiln_air_flow;
-        example['kiln_max_temp'] = kiln_max_temp;
-        example['kiln_humidity'] = kiln_humidity;
-        example['delta_air_cooling'] = delta_air_cooling;
-        example['delta_moisture'] = delta_moisture;
-        example['delta_air_flow'] = delta_air_flow;
-        example['delta_max_temp'] = delta_max_temp;
-        example['delta_humidity'] = delta_humidity;
-      }
-      // Sort: include everything up to Kiln, NOT Sort output fields
-      if (stageIdx >= 4) {
-        // Populate Kiln output so Sort can use it, but not Sort output
-        example['vol_kiln_out'] = kilnOut;
-        // No additional input fields for Sort in current schema
-      }
-
-      // Remove current stage's own output field (vol_*_out for that stage)
-      if (stage === 'Press')   example['vol_press_out'] = '';
-      if (stage === 'Glaze')   example['vol_glaze_out'] = '';
-      if (stage === 'Kiln')    example['vol_kiln_out'] = '';
-      if (stage === 'Sort')    example['vol_sort_out'] = '';
-
-      // Fill missing fields as blank
-      fields.forEach(f => {
-        if (!(f in example)) example[f] = '';
-      });
-
-      stageExamples[stage] = example;
-    });
-
-    STAGES.forEach(s => {
-      stageRunStatus[s] = runningStages.includes(s) ? 'running' : 'idle';
-    });
-
-    updateStageRunStatus();
-    if (runningStages.length > 0) setActiveStage(runningStages[0]);
-    $('statusText').textContent = `Example generated — Running: ${runningStages.join(', ')}`;
+  // Recompute when a run is selected from the dropdown
+  window.addEventListener('cycleSelected', () => {
+    // fields already filled by loss_predictions.js → just predict + flag
     predictNow();
-  }
-
-  // Events
-  // Remove separate Predict and Reset button event listeners (if present)
-  // Only keep Generate & Predict Example
-  if (document.getElementById('btnExample')) {
-    document.getElementById('btnExample').addEventListener('click', loadExample);
-  }
-
-  // Boot
-  resetAll();
-  initPy();
-
-  // once python and model load, auto-run example + predict
-  window.addEventListener('load', async () => {
-    // wait briefly to ensure Pyodide and model finish loading
-    let checkCount = 0;
-    const waitForModel = setInterval(() => {
-      if (typeof modelLoaded !== 'undefined' && modelLoaded) {
-        clearInterval(waitForModel);
-        loadExample();    // fill example values
-        setTimeout(predictNow, 500);  // predict after a short delay
-      } else if (++checkCount > 50) {
-        clearInterval(waitForModel);
-        console.warn('Model did not load within expected time.');
-      }
-    }, 200);
   });
+
+  resetBoot();
 </script>
 </body>
 </html>
