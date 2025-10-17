@@ -252,6 +252,20 @@
               <canvas id="lossLineChart" class="w-full h-full"></canvas>
             </section>
           </div>
+<!-- CHART -->
+<div class="mt-6 grid grid-cols-12 gap-4">
+  <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-64 md:h-[24rem]">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="text-lg font-semibold text-slate-800">Material Loss Per Stage</h3>
+      <div class="flex items-center gap-3 text-xs text-slate-500">
+        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Actual</span>
+        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#F4B000"></span> Predicted</span>
+        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
+      </div>
+    </div>
+    <canvas id="lossLineChart" class="w-full h-full"></canvas>
+  </section>
+</div>
 
           <!-- FLAGS -->
           <section id="flagsPanel" class="mt-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 hidden">
