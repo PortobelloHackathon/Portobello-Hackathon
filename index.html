@@ -131,276 +131,291 @@
     </div>
   </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-    // ---- Brand + status colors ----
-    const PB_BLUE     = '#0B1F52';
-    const PB_GRAY_D   = '#434A52';
-    const PB_GRAY_M   = '#7C8390';
-    const PB_GRAY_L   = '#CFD3DA';
-    const STATUS_GREEN  = '#2BAF6A'; // past
-    const STATUS_YELLOW = '#F4B000'; // current
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // ---- Brand + status colors ----
+  const PB_BLUE     = '#0B1F52';
+  const PB_GRAY_D   = '#434A52';
+  const PB_GRAY_M   = '#7C8390';
+  const PB_GRAY_L   = '#CFD3DA';
+  const STATUS_GREEN  = '#2BAF6A'; // past
+  const STATUS_YELLOW = '#F4B000'; // current
 
-    // categorical palette for breakdown
-    const CUT = '#1F77B4', ASM = '#FF7F0E', QC = '#2CA02C', PKG = '#9467BD';
+  // Stage labels (use this everywhere)
+  const STAGE_LABELS = ['Start','Press','Glaze','Kiln','Sort'];
 
-    // ---- Chart.js defaults ----
-    Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-    Chart.defaults.color = PB_GRAY_D;
-    Chart.defaults.plugins.legend.display = false;
+  // categorical palette for breakdown
+  const STAGE_COLORS = ['#1F77B4','#FF7F0E','#2CA02C','#9467BD','#D62728'];
+
+  // ---- Chart.js defaults ----
+  Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+  Chart.defaults.color = PB_GRAY_D;
+  Chart.defaults.plugins.legend.display = false;
 
   // Canvases
-  const lineCtx  = document.getElementById('lossLineChart');
-  const multiCtx = document.getElementById('multiRingDonut');
-  const stepPctCtx = document.getElementById('stepPctChart');
+  const lineCtx     = document.getElementById('lossLineChart');
+  const multiCtx    = document.getElementById('multiRingDonut');
+  const stepPctCtx  = document.getElementById('stepPctChart');
+  const dashLoading = document.getElementById('dashLoading');
 
-    // ----- Line chart (stages + status colors) -----
-    let statuses = []; // ['past','current','future',...] length 5
-    let stageLabels = ['Start','Press','Glaze','Kiln','Sort']; // fallback
+  // ----- Line chart (stages + status colors) -----
+  let statuses = []; // ['past','current','future',...] length 5
 
-    function colorFor(idx) {
-      const s = statuses[idx];
-      if (s === 'past')    return STATUS_GREEN;
-      if (s === 'current') return STATUS_YELLOW;
-      return PB_BLUE;
-    }
-
-    const lossLineChart = new Chart(lineCtx, {
-      type: 'line',
-      data: {
-        labels: stageLabels,
-        datasets: [{
-          label: 'Value (kg)',
-          data: [],
-          borderColor: STATUS_GREEN,
-          backgroundColor: STATUS_GREEN + '33',
-          pointBackgroundColor: STATUS_GREEN,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          tension: 0.3,
-          fill: true
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: {
-              maxRotation: 0,
-              callback: (val, idx) => `${idx + 1}. ${stageLabels[idx]}`
-            }
-          },
-          y: { grid: { color: PB_GRAY_L } }
+  const lossLineChart = new Chart(lineCtx, {
+    type: 'line',
+    data: {
+      labels: STAGE_LABELS,
+      datasets: [{
+        label: 'Value (kg)',
+        data: [],
+        borderColor: STATUS_GREEN,
+        backgroundColor: STATUS_GREEN + '33',
+        pointBackgroundColor: STATUS_GREEN,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: {
+            maxRotation: 0,
+            callback: (_val, idx) => `${idx + 1}. ${STAGE_LABELS[idx]}`
+          }
         },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              title: (items) => {
-                const i = items[0].dataIndex;
-                return `Stage ${i + 1} — ${stageLabels[i]}`;
-              }
+        y: { grid: { color: PB_GRAY_L } }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              const i = items[0].dataIndex;
+              return `Stage ${i + 1} — ${STAGE_LABELS[i]}`;
             }
           }
         }
       }
-    });
-
-    // ----- KPI donuts -----
-    function makeDonut(ctx, pct, color = PB_BLUE) {
-      return new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Complete','Remaining'],
-          datasets: [{ data: [pct, 100 - pct], backgroundColor: [color, PB_GRAY_L], borderWidth: 0, cutout: '70%' }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } } }
-      });
     }
+  });
 
-  // KPI donuts removed per request
+  // ----- Multi-ring donut (3 rings = Press, Glaze, Kiln losses) -----
+  const BG = '#EEF2F6';
+  const THICK = 10;
+  const band = (innerPct) => ({ cutout: `${innerPct}%`, radius: `${innerPct + THICK}%` });
+  const b1 = band(70), b2 = band(80), b3 = band(90);
 
-    // ----- Multi-ring donut with equal ring widths -----
-    // Stage colors: Start, Press, Glaze, Kiln, Sort
-    const STAGE_COLORS = ['#1F77B4','#FF7F0E','#2CA02C','#9467BD','#D62728'];
-    const BG = '#EEF2F6';
-    const THICK = 10;
-    const band = (innerPct) => ({ cutout: `${innerPct}%`, radius: `${innerPct + THICK}%` });
-    const b1 = band(70), b2 = band(80), b3 = band(90);
-
-    const multiRingChart = new Chart(multiCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Lost','Remaining'],
-        datasets: [
-          // datasets are [Remaining, Lost] so a full circle = no loss
-          { data: [100,0], backgroundColor: [STAGE_COLORS[0], BG], borderColor: '#fff', borderWidth: 0, cutout: b1.cutout, radius: b1.radius },
-          { data: [100,0], backgroundColor: [STAGE_COLORS[1], BG], borderColor: '#fff', borderWidth: 0, cutout: b2.cutout, radius: b2.radius },
-          { data: [100,0], backgroundColor: [STAGE_COLORS[2], BG], borderColor: '#fff', borderWidth: 0, cutout: b3.cutout, radius: '98%' }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false, rotation: -90 * (Math.PI/180), plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => { const ds = ctx.dataset; const idx = ctx.dataIndex; const val = ds.data[idx]; if (idx === 0) return `Remaining: ${val}%`; return `Lost: ${val}%`; } } } } }
-    });
-
-    // small horizontal bar chart showing percent remaining per step (Start=100%)
-    const stepPctChart = new Chart(stepPctCtx, {
-      type: 'bar',
-      data: {
-        labels: STAGE_LABELS,
-        datasets: [{ label: 'Remaining %', data: [100,0,0,0,0], backgroundColor: STAGE_COLORS }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: { x: { max: 100, ticks: { callback: v => v + '%' } }, y: { grid: { display: false } } },
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.x}% remaining (lost ${ (100-ctx.parsed.x).toFixed(1) }%)` } } }
+  const multiRingChart = new Chart(multiCtx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Remaining','Lost'],
+      datasets: [
+        { data: [100,0], backgroundColor: [STAGE_COLORS[1], BG], borderWidth: 0, cutout: b1.cutout, radius: b1.radius }, // Press
+        { data: [100,0], backgroundColor: [STAGE_COLORS[2], BG], borderWidth: 0, cutout: b2.cutout, radius: b2.radius }, // Glaze
+        { data: [100,0], backgroundColor: [STAGE_COLORS[3], BG], borderWidth: 0, cutout: b3.cutout, radius: '98%' }       // Kiln
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      rotation: -90 * (Math.PI/180),
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const val = ctx.parsed;
+              return ctx.dataIndex === 0 ? `Remaining: ${val}%` : `Lost: ${val}%`;
+            }
+          }
+        }
       }
-    });
-
-    // helper element to display percent on legend hover
-    const multiRingPercentEl = document.getElementById('multiRingPercent');
-  // ensure default ring values exist (one per stage)
+    }
+  });
+  // store cumulative lost values for hover summary
   multiRingChart._ringVals = [0,0,0,0,0];
-    // attach hover listeners to direct legend children for more robust matching
-    const legendItems = document.querySelectorAll('#stageLegend > div');
-    legendItems.forEach((el, idx) => {
-      el.addEventListener('mouseenter', () => {
-        // prefer explicit stored values, otherwise read from chart datasets (datasets are [Remaining, Lost])
-        let pct = 0;
-        if (multiRingChart._ringVals && multiRingChart._ringVals[idx] != null) {
-          pct = multiRingChart._ringVals[idx];
-        } else if (multiRingChart.data && multiRingChart.data.datasets[idx]) {
-          const ds = multiRingChart.data.datasets[idx];
-          pct = ds.data && ds.data[1] != null ? ds.data[1] : 0;
+
+  // small horizontal bar chart showing cumulative % remaining vs START
+  const stepPctChart = new Chart(stepPctCtx, {
+    type: 'bar',
+    data: {
+      labels: STAGE_LABELS,
+      datasets: [{ label: 'Remaining %', data: [100,0,0,0,0], backgroundColor: STAGE_COLORS }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { max: 100, ticks: { callback: v => v + '%' } },
+        y: { grid: { display: false } }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.parsed.x}% remaining (lost ${(100-ctx.parsed.x).toFixed(1)}%)`
+          }
         }
-        multiRingPercentEl.textContent = `${STAGE_LABELS[idx]} loss: ${Number(pct).toFixed(1)}%`;
-      });
-      el.addEventListener('mouseleave', () => { multiRingPercentEl.textContent = ''; });
-    });
-
-    // ----- Load from API -----
-    async function loadDashboard() {
-      try {
-        dashLoading.textContent = 'loading…';
-
-        const [stagesRes, dashRes] = await Promise.all([
-          fetch('/api/stats/stages').then(r => r.json()),
-          fetch('/api/stats/dashboard').then(r => r.json()),
-        ]);
-
-        // line
-        stageLabels = stagesRes.stages || stageLabels;
-        statuses = stagesRes.statuses || [];
-        lossLineChart.data.labels = stageLabels;
-        lossLineChart.data.datasets[0].data = stagesRes.lossKg || [];
-        lossLineChart.update();
-
-  // KPI sections removed; skipping kpi updates
-    }
-
-    // charts start empty until user selects a timestamp
-    // (no demo data loaded by default)
-
-    // --- CSV parsing + modal wiring ---
-    function parseCSV(text){
-      const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim()!=='');
-      if(lines.length===0) return {columns:[],rows:[]};
-      const parseLine = (line)=>{const res=[];let cur='';let inQ=false;for(let i=0;i<line.length;i++){const ch=line[i]; if(ch==='"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ=!inQ; continue;} if(ch===',' && !inQ){ res.push(cur); cur=''; continue; } cur+=ch;} res.push(cur); return res; };
-      const headers = parseLine(lines[0]).map(h=>h.trim());
-      const rows = lines.slice(1).map(l=>{const parts=parseLine(l); const obj={}; for(let i=0;i<headers.length;i++) obj[headers[i]] = parts[i]!==undefined?parts[i].trim():''; return obj; });
-      return {columns: headers, rows};
-    }
-
-    const chooseBtn = document.getElementById('chooseAnalyticsTs');
-    const modalEl = document.getElementById('analyticsModal');
-    const selectEl = document.getElementById('analyticsSelect');
-    const cancelBtn = document.getElementById('analyticsCancel');
-    const viewBtn = document.getElementById('analyticsView');
-
-    let analyticsData = null;
-    fetch('tiles6.csv').then(r=>r.text()).then(txt=>{
-      try{
-        analyticsData = parseCSV(txt);
-        if(analyticsData.columns.includes('datetime')){
-          // dedupe timestamps preserving order
-          const seen = new Set();
-          analyticsData.rows.forEach(r=>{ if(!seen.has(r.datetime)){ seen.add(r.datetime); const o = document.createElement('option'); o.value=r.datetime; o.textContent=r.datetime; selectEl.appendChild(o); } });
-        }
-      }catch(e){ console.warn('CSV parse failed',e); }
-    }).catch(e=>console.warn('fetch failed',e));
-
-    chooseBtn.addEventListener('click', ()=>{ modalEl.classList.remove('hidden'); modalEl.classList.add('flex'); });
-    cancelBtn.addEventListener('click', ()=>{ modalEl.classList.add('hidden'); modalEl.classList.remove('flex'); });
-    viewBtn.addEventListener('click', ()=>{
-      const ts = selectEl.value; if(!analyticsData) return; const rows = analyticsData.rows.filter(r=>r.datetime===ts);
-      if(rows.length===0) return;
-      const aliasGroups = [
-        ['vol_start'],
-        ['vol_press','vol_press_out'],
-        ['vol_glaze','vol_glaze_out'],
-        ['vol_kiln_out'],
-        ['vol_sort_out']
-      ];
-      const cols = aliasGroups.map(group => group.find(g => analyticsData.columns.includes(g))).filter(Boolean);
-      const values = cols.map(c => Number(rows[0][c] || 0));
-      while(values.length<5) values.push(0);
-      const statuses = ['past','past','current','future','future'];
-      updateDashboard({ lossKg: values.slice(0,5), statuses, kpis: { yieldPct: 86, scrapPct: 14, onTimePct: 92 } });
-
-      // Compute cumulative percentages relative to START so losses carry forward
-      // steps: [Start, Press, Glaze, Kiln, Sort]
-      const startVal = values[0] || 0;
-      const cumulativeRemaining = values.map(v => startVal > 0 ? (v / startVal) * 100 : 0);
-      // cumulativeLost per stage = 100 - cumulativeRemaining
-      const cumulativeLost = cumulativeRemaining.map(v => Math.max(0, Math.min(100, 100 - v)));
-      // Use first three cumulative lost values for the three rings (Press, Glaze, Kiln)
-      const ringVals = [ (cumulativeLost[1] || 0), (cumulativeLost[2] || 0), (cumulativeLost[3] || 0) ];
-      // Update datasets: each dataset expects [Remaining, Lost]
-      multiRingChart.data.datasets.forEach((ds, idx) => {
-        const lost = ringVals[idx] || 0;
-        const remaining = Number((100 - lost).toFixed(1));
-        ds.data = [remaining, Number(lost.toFixed(1))];
-        // set lost slice color to the corresponding stage color
-        const color = STAGE_COLORS[idx] || STAGE_COLORS[0];
-        ds.backgroundColor = [color, BG];
-      });
-  // store cumulative lost values for hover display (one per stage)
-  multiRingChart._ringVals = cumulativeLost.map(v => Number(v.toFixed(1)));
-      multiRingChart.update();
-
-      // update stepPctChart to show cumulative percent remaining relative to START
-      // Start = 100%, Press = press/start*100, Glaze = glaze/start*100, etc.
-      const stepPcts = cumulativeRemaining.map(v => Number(v.toFixed(1)));
-      while (stepPcts.length < 5) stepPcts.push(0);
-      stepPctChart.data.datasets[0].data = stepPcts.slice(0,5);
-      stepPctChart.update();
-      modalEl.classList.add('hidden'); modalEl.classList.remove('flex');
-    });
-
-    // stage modal wiring: open blank modal when clicking chart points for indices 1..4 (Press..Sort)
-    const stageModal = document.getElementById('stageModal');
-    const stageModalTitle = document.getElementById('stageModalTitle');
-    const stageModalBody = document.getElementById('stageModalBody');
-    const stageModalClose = document.getElementById('stageModalClose');
-    stageModalClose.addEventListener('click', ()=>{ stageModal.classList.add('hidden'); stageModal.classList.remove('flex'); });
-
-    // Chart.js click handler
-    lineCtx.addEventListener('click', (evt) => {
-      const points = lossLineChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
-      if (!points || points.length === 0) return;
-      const pt = points[0];
-      const idx = pt.index;
-      // only open modal for stages Press(1), Glaze(2), Kiln(3), Sort(4)
-      if (idx >=1 && idx <=4) {
-        stageModalTitle.textContent = STAGE_LABELS[idx];
-        stageModalBody.innerHTML = '';
-        stageModal.classList.remove('hidden'); stageModal.classList.add('flex');
       }
-    });
+    }
+  });
 
-    }); // end DOMContentLoaded
-  </script>
-</body>
-</html>
+  // Hover values next to legend
+  const multiRingPercentEl = document.getElementById('multiRingPercent');
+  const legendItems = document.querySelectorAll('#stageLegend > div');
+  legendItems.forEach((el, idx) => {
+    el.addEventListener('mouseenter', () => {
+      const v = multiRingChart._ringVals[idx] ?? 0;
+      multiRingPercentEl.textContent = `${STAGE_LABELS[idx]} loss: ${Number(v).toFixed(1)}%`;
+    });
+    el.addEventListener('mouseleave', () => { multiRingPercentEl.textContent = ''; });
+  });
+
+  // ----- CSV parsing + modal wiring -----
+  function parseCSV(text) {
+    // strip BOM if present, normalize newlines, drop empty lines
+    const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const lines = clean.split('\n').filter(l => l.trim() !== '');
+    if (lines.length === 0) return { columns: [], rows: [] };
+
+    const parseLine = (line) => {
+      const out = []; let cur = ''; let inQ = false;
+      for (let i=0; i<line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+          else { inQ = !inQ; }
+          continue;
+        }
+        if (ch === ',' && !inQ) { out.push(cur); cur = ''; continue; }
+        cur += ch;
+      }
+      out.push(cur);
+      return out;
+    };
+
+    const headers = parseLine(lines[0]).map(h => h.trim());
+    const rows = lines.slice(1).map(l => {
+      const parts = parseLine(l);
+      const obj = {};
+      for (let i=0; i<headers.length; i++) obj[headers[i]] = parts[i] !== undefined ? parts[i].trim() : '';
+      return obj;
+    });
+    return { columns: headers, rows };
+  }
+
+  const chooseBtn = document.getElementById('chooseAnalyticsTs');
+  const modalEl   = document.getElementById('analyticsModal');
+  const selectEl  = document.getElementById('analyticsSelect');
+  const cancelBtn = document.getElementById('analyticsCancel');
+  const viewBtn   = document.getElementById('analyticsView');
+
+  let analyticsData = null;
+  fetch('tiles6.csv')
+    .then(r => r.text())
+    .then(txt => {
+      try {
+        analyticsData = parseCSV(txt);
+        if (analyticsData.columns.includes('datetime')) {
+          const seen = new Set();
+          analyticsData.rows.forEach(r => {
+            if (!seen.has(r.datetime)) {
+              seen.add(r.datetime);
+              const o = document.createElement('option');
+              o.value = r.datetime;
+              o.textContent = r.datetime;
+              selectEl.appendChild(o);
+            }
+          });
+        }
+      } catch (e) { console.warn('CSV parse failed', e); }
+    })
+    .catch(e => console.warn('fetch failed', e));
+
+  chooseBtn.addEventListener('click', () => {
+    modalEl.classList.remove('hidden'); modalEl.classList.add('flex');
+  });
+  cancelBtn.addEventListener('click', () => {
+    modalEl.classList.add('hidden'); modalEl.classList.remove('flex');
+  });
+
+  viewBtn.addEventListener('click', () => {
+    const ts = selectEl.value;
+    if (!analyticsData) return;
+    const rows = analyticsData.rows.filter(r => r.datetime === ts);
+    if (rows.length === 0) return;
+
+    // column aliases → pick whichever exists in CSV
+    const aliasGroups = [
+      ['vol_start'],
+      ['vol_press','vol_press_out'],
+      ['vol_glaze','vol_glaze_out'],
+      ['vol_kiln','vol_kiln_out'],
+      ['vol_sort','vol_sort_out']
+    ];
+    const cols = aliasGroups.map(group => group.find(name => analyticsData.columns.includes(name))).filter(Boolean);
+    const values = cols.map(c => Number(rows[0][c] || 0));
+    while (values.length < 5) values.push(0);
+
+    // update line chart (values are absolute mass/volume readings per stage)
+    statuses = ['past','past','current','future','future'];
+    lossLineChart.data.labels = STAGE_LABELS;
+    lossLineChart.data.datasets[0].data = values.slice(0,5);
+    lossLineChart.update();
+
+    // cumulative remaining vs Start
+    const startVal = values[0] || 0;
+    const cumulativeRemaining = values.map(v => startVal > 0 ? (v / startVal) * 100 : 0);
+    const cumulativeLost = cumulativeRemaining.map(v => Math.max(0, Math.min(100, 100 - v)));
+
+    // update the three rings: Press, Glaze, Kiln losses
+    const ringVals = [cumulativeLost[1] || 0, cumulativeLost[2] || 0, cumulativeLost[3] || 0];
+    multiRingChart.data.datasets.forEach((ds, idx) => {
+      const lost = Number((ringVals[idx] || 0).toFixed(1));
+      const remaining = Number((100 - lost).toFixed(1));
+      ds.data = [remaining, lost]; // [Remaining, Lost]
+    });
+    // store per-stage cumulative loss (for legend hover: Start..Sort)
+    multiRingChart._ringVals = cumulativeLost.map(v => Number(v.toFixed(1)));
+    multiRingChart.update();
+
+    // update horizontal bars for remaining %
+    const stepPcts = cumulativeRemaining.map(v => Number(v.toFixed(1)));
+    while (stepPcts.length < 5) stepPcts.push(0);
+    stepPctChart.data.datasets[0].data = stepPcts.slice(0,5);
+    stepPctChart.update();
+
+    // close modal
+    modalEl.classList.add('hidden'); modalEl.classList.remove('flex');
+  });
+
+  // stage modal wiring: open blank modal when clicking chart points for indices 1..4 (Press..Sort)
+  const stageModal      = document.getElementById('stageModal');
+  const stageModalTitle = document.getElementById('stageModalTitle');
+  const stageModalBody  = document.getElementById('stageModalBody');
+  const stageModalClose = document.getElementById('stageModalClose');
+
+  stageModalClose.addEventListener('click', () => {
+    stageModal.classList.add('hidden'); stageModal.classList.remove('flex');
+  });
+
+  lineCtx.addEventListener('click', (evt) => {
+    const points = lossLineChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+    if (!points || points.length === 0) return;
+    const pt = points[0];
+    const idx = pt.index;
+    if (idx >= 1 && idx <= 4) {
+      stageModalTitle.textContent = STAGE_LABELS[idx];
+      stageModalBody.innerHTML = '';
+      stageModal.classList.remove('hidden'); stageModal.classList.add('flex');
+    }
+  });
+
+}); // end DOMContentLoaded
+</script>
