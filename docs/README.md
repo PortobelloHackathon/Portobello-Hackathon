@@ -1,6 +1,6 @@
 ⸻
 
-Portobello Hackathon — Smart Information Management
+# Portobello Hackathon — Smart Information Management
 
 Team: John Herron • Jacob Hernando • Adrian Gonzalez • Kymanie Louis • Kashaina Nucum
 Event: Portobello America Hackathon 2025
