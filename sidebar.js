@@ -17,7 +17,6 @@
     { href: 'batch_compare.html',    label: 'Batch Compare',       icon: 'batch_compare' },
     { href: 'recipe_analytics.html', label: 'Recipe Analytics',    icon: 'recipes_analytics' },
     { href: 'edit_recipes.html',     label: 'Edit Recipe',         icon: 'recipes_edit' },
-    { href: 'anomalies.html', label: 'Anomalies', icon: 'anomaly' },
     { href: 'info.html',             label: 'Info & How-To',       icon: 'info' },
   ];
 
@@ -139,13 +138,6 @@
         add(P('M16.5 9.5l2 2'));                      // accent
         break;
       }
-      case 'anomaly': {
-        // Triangle warning
-        add(P('M12 3 L21 19 H3 Z'));           // triangle
-        add(P('M12 8v5'));                      // exclamation bar
-        add(C(12, 15.5, 0.8));                  // dot
-        break;
-    }
       case 'info': {
         // Info circle
         add(C(12, 12, 9));

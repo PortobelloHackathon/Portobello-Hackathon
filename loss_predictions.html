@@ -72,8 +72,64 @@
         <section id="panel-predictions">
           <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Predictions</h2>
 
+          <!-- ======== STAGE TAB CONTROL ======== -->
+          <section id="stage-tab-control" class="mt-5 mb-6">
+            <div class="flex flex-row gap-2">
+              <button
+                type="button"
+                class="stage-tab px-4 py-2 rounded-t-lg border-b-4 border-transparent text-sm font-medium bg-white text-pbBlue hover:bg-slate-100 transition"
+                data-stage="Start"
+                id="stageTabStart"
+              >
+                Start
+                <span class="ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold"
+                      id="stageStatusStart">—</span>
+              </button>
+              <button
+                type="button"
+                class="stage-tab px-4 py-2 rounded-t-lg border-b-4 border-transparent text-sm font-medium bg-white text-pbBlue hover:bg-slate-100 transition"
+                data-stage="Press"
+                id="stageTabPress"
+              >
+                Press
+                <span class="ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold"
+                      id="stageStatusPress">—</span>
+              </button>
+              <button
+                type="button"
+                class="stage-tab px-4 py-2 rounded-t-lg border-b-4 border-transparent text-sm font-medium bg-white text-pbBlue hover:bg-slate-100 transition"
+                data-stage="Glaze"
+                id="stageTabGlaze"
+              >
+                Glaze
+                <span class="ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold"
+                      id="stageStatusGlaze">—</span>
+              </button>
+              <button
+                type="button"
+                class="stage-tab px-4 py-2 rounded-t-lg border-b-4 border-transparent text-sm font-medium bg-white text-pbBlue hover:bg-slate-100 transition"
+                data-stage="Kiln"
+                id="stageTabKiln"
+              >
+                Kiln
+                <span class="ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold"
+                      id="stageStatusKiln">—</span>
+              </button>
+              <button
+                type="button"
+                class="stage-tab px-4 py-2 rounded-t-lg border-b-4 border-transparent text-sm font-medium bg-white text-pbBlue hover:bg-slate-100 transition"
+                data-stage="Sort"
+                id="stageTabSort"
+              >
+                Sort
+                <span class="ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold"
+                      id="stageStatusSort">—</span>
+              </button>
+            </div>
+          </section>
+
           <!-- TOP STATUS -->
-          <section class="mt-5 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+          <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
             <div class="flex flex-wrap items-start gap-3 justify-between">
               <div>
                 <h3 class="text-lg font-semibold text-slate-800">Model & Inputs</h3>
@@ -84,9 +140,7 @@
                 </details>
               </div>
               <div class="flex items-center gap-2">
-                <button id="btnExample"   class="px-3 py-1.5 rounded border">Example</button>
-                <button id="btnReset"     class="px-3 py-1.5 rounded border">Reset</button>
-                <button id="btnPredict"   class="px-3 py-1.5 rounded bg-pbBlue text-white font-semibold">Predict</button>
+                <button id="btnExample" class="px-3 py-1.5 rounded bg-pbBlue text-white font-semibold">Generate & Predict Example</button>
               </div>
             </div>
           </section>
@@ -266,10 +320,113 @@
   tabButtons.forEach(btn => btn.addEventListener('click', () => setActiveTab(btn.dataset.tab)));
   setActiveTab('predictions');
 
+  // ---------- Stage Tab Control ----------
+  // Track active stage and running/idle status
+  const STAGES = ['Start','Press','Glaze','Kiln','Sort'];
+  let activeStage = 'Start';
+  // Running/idle status: can be set to 'running' or 'idle'
+  let stageRunStatus = {
+    Start: 'idle',
+    Press: 'idle',
+    Glaze: 'idle',
+    Kiln: 'idle',
+    Sort: 'idle'
+  };
+  // Store example data for each running stage (global)
+  let stageExamples = {};
+
+  function setActiveStage(stage) {
+    activeStage = stage;
+    // Highlight the active tab
+    STAGES.forEach(s => {
+      const tab = document.getElementById('stageTab' + s);
+      if (!tab) return;
+      if (s === stage) {
+        tab.classList.add('border-pbBlue', 'bg-pbBlue', 'text-white', 'shadow');
+        tab.classList.remove('border-transparent', 'bg-white', 'text-pbBlue');
+        tab.setAttribute('aria-current', 'stage');
+      } else {
+        tab.classList.remove('border-pbBlue', 'bg-pbBlue', 'text-white', 'shadow');
+        tab.classList.add('border-transparent', 'bg-white', 'text-pbBlue');
+        tab.removeAttribute('aria-current');
+      }
+    });
+    updateStageTabStates();
+    // If this stage is a running stage and has example data, populate inputs from that example
+    if (stageExamples && stageExamples[stage]) {
+      // Set all input values from saved example for this stage
+      const example = stageExamples[stage];
+      fields.forEach(f => setVal(f, example[f]));
+      // After setting, re-predict so chart and badges update
+      predictNow();
+    }
+  }
+
+  // Set status badge for each stage and update tab enabled/disabled state
+  function updateStageRunStatus() {
+    STAGES.forEach(s => {
+      const badge = document.getElementById('stageStatus'+s);
+      let status = stageRunStatus[s];
+      if (!badge) return;
+      if (status === 'running') {
+        badge.textContent = 'Running';
+        badge.className = 'ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold bg-green-100 text-green-800';
+      } else if (status === 'idle' || status == null) {
+        badge.textContent = '—';
+        badge.className = 'ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold bg-slate-100 text-slate-700';
+      } else if (typeof status === 'number') {
+        badge.textContent = String(status);
+        badge.className = 'ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold bg-amber-100 text-amber-800';
+      } else {
+        badge.textContent = String(status);
+        badge.className = 'ml-2 inline-flex items-center text-xs rounded px-2 py-0.5 font-semibold bg-slate-100 text-slate-700';
+      }
+    });
+    updateStageTabStates();
+  }
+
+  // Only running stages are enabled/selectable, all others are fully disabled
+  function updateStageTabStates() {
+    STAGES.forEach((s, i) => {
+      const tab = document.getElementById('stageTab' + s);
+      if (!tab) return;
+      let enable = (stageRunStatus[s] === 'running');
+      if (enable) {
+        tab.disabled = false;
+        tab.classList.remove('opacity-50','pointer-events-none','cursor-not-allowed');
+      } else {
+        tab.disabled = true;
+        tab.classList.add('opacity-50','pointer-events-none','cursor-not-allowed');
+      }
+    });
+  }
+
+  // Add event listeners for stage tabs
+  window.addEventListener('DOMContentLoaded', () => {
+    STAGES.forEach(s => {
+      const tab = document.getElementById('stageTab' + s);
+      if (tab) {
+        tab.addEventListener('click', (e) => {
+          // Only allow click if this stage is "running"
+          if (tab.disabled) {
+            // Briefly flash to show disabled
+            tab.classList.add('ring-2','ring-red-400');
+            setTimeout(()=>tab.classList.remove('ring-2','ring-red-400'),250);
+            e.preventDefault();
+            return;
+          }
+          setActiveStage(s);
+        });
+      }
+    });
+    // Set default active stage and update badges
+    setActiveStage(activeStage);
+    updateStageRunStatus();
+  });
+
   // ---------- Colors / Chart defaults ----------
   const PB_GRAY_D = '#434A52', PB_GRAY_L='#CFD3DA';
   const ACTUAL = '#16A34A', PRED='#F4B000', FUTURE='#0B1F52';
-  const STAGES = ['Start','Press','Glaze','Kiln','Sort'];
 
   Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
   Chart.defaults.color = PB_GRAY_D;
@@ -394,12 +551,30 @@
   });
 
   function updateChart(vols, mins, statuses){
+    // Remove any notion of "complete" status. Only "running" and "idle" exist.
+    // Mark all non-running stages as "idle".
+    // Find running stages (indices)
+    const runningIdxs = STAGES.map((s, i) => stageRunStatus[s] === 'running' ? i : -1).filter(i => i !== -1);
+    // If no running stages, fallback to first pred/actual, else 0
+    let fallbackIdx = STAGES.findIndex((s, i) => statuses[i] === 'pred' || statuses[i] === 'actual');
+    if (fallbackIdx === -1) fallbackIdx = 0;
+    // All stages not in runningIdxs are "idle"
+    // For chart status, just propagate actual/pred/future as before
     stageStatus = statuses.slice();
     lastVols = vols.slice();
     lastMins = mins.slice();
     lossLineChart.data.datasets[0].data = vols;
     lossLineChart.data.datasets[1].data = mins;
     lossLineChart.update();
+    // Update stage run status indicators: only "running" for runningIdxs, "idle" for others
+    STAGES.forEach((s, i) => {
+      if (runningIdxs.includes(i)) {
+        stageRunStatus[s] = 'running';
+      } else {
+        stageRunStatus[s] = 'idle';
+      }
+    });
+    updateStageRunStatus();
   }
 
   // Badges
@@ -421,6 +596,13 @@
     updateChart([null,null,null,null,null],[null,null,null,null,null],['future','future','future','future','future']);
     setBadges();
     $('inputHint').textContent='Enter Start → add actuals or inputs to unlock predictions.';
+    // Reset stage tab to Start and all status to idle
+    activeStage = 'Start';
+    setActiveStage(activeStage);
+    STAGES.forEach(s => { stageRunStatus[s] = 'idle'; });
+    updateStageRunStatus();
+    // Clear example store
+    stageExamples = {};
   }
 
   // ------------------- Pyodide + Auto-load model -------------------
@@ -656,6 +838,8 @@ def predict(payload):
 
     setBadges([statuses[0],statuses[1],statuses[2],statuses[3]]);
     updateChart(vols, mins, statuses);
+    // Optionally, set the active stage to the first predicted or actual stage
+    // but keep user selection unless you want to auto-advance.
 
     const hints=[];
     if(statuses[1]==='future') hints.push('Press needs target_pressure and/or actual Press output.');
@@ -665,7 +849,7 @@ def predict(payload):
     $('statusText').textContent = 'Done.';
   }
 
-  // ---------- Example: random stage, only fill up to that stage ----------
+  // ---------- Example: multi-stage, each running stage gets its own example data ----------
   function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
   function randFloat(a,b){ return a + Math.random()*(b-a); }
 
@@ -673,89 +857,144 @@ def predict(payload):
     fields.forEach(id=>setVal(id,''));
   }
 
-  function loadExample(){
-    // Always ensure Start section is populated and not reset after
-    // random recipe id from dropdown
+  function loadExample() {
+    resetAll();
+    stageExamples = {};
+
+    // Randomly select 2 running stages, ordered
+    const stageIndices = [...Array(STAGES.length).keys()];
+    stageIndices.sort(() => Math.random() - 0.5);
+    const runningIdxs = stageIndices.slice(0, 2).sort((a, b) => a - b);
+    const runningStages = runningIdxs.map(i => STAGES[i]);
+
+    // Generate shared random values for Start fields
+    const dt = new Date();
     const ids = [241,244,245,246,247];
     const rid = ids[Math.floor(Math.random()*ids.length)];
-    // random stage: 0 Start only, 1 Up to Press, 2 Up to Glaze, 3 Up to Kiln
-    const stageIdx = Math.floor(Math.random()*4);
-    // base start volume
     const start = randInt(56000, 90000);
+    const glossType = ['shiny','matte','satin'][randInt(0,2)];
+    const glossAmt = Number(randFloat(10, 25).toFixed(1));
 
-    // Example datetime in "mm/dd/yyyy, --:-- --" locale-friendly format
-    const dt = new Date(Date.now() - randInt(0, 7*24*60*60*1000));
-    // Format as mm/dd/yyyy, hh:mm AM/PM
-    function formatDateLocal(dt) {
-      // Using en-US for mm/dd/yyyy, 12-hour
-      return dt.toLocaleString('en-US', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
+    // Generate values for each stage in order, to enable proper dependency
+    // Store intermediate values to allow correct propagation
+    let pressOut, glazeOut, kilnOut, sortOut;
+    let target_pressure, actual_pressure, layers_tossed, desired_thickness;
+    let recipe_air_cooling, recipe_moisture, recipe_air_flow, recipe_max_temp, recipe_humidity;
+    let kiln_air_cooling, kiln_moisture, kiln_air_flow, kiln_max_temp, kiln_humidity;
+    let delta_air_cooling, delta_moisture, delta_air_flow, delta_max_temp, delta_humidity;
+
+    // Compute all possible values up front for use in each running stage
+    pressOut = Math.round(start * randFloat(0.987, 0.994));
+    target_pressure = Math.round(randFloat(3000, 3200));
+    actual_pressure = Math.round(randFloat(2950, 3250));
+    layers_tossed = randInt(0, 2);
+    desired_thickness = Number(randFloat(7.5, 8.5).toFixed(2));
+
+    glazeOut = Math.round(pressOut * randFloat(0.988, 0.993));
+    recipe_air_cooling = Number(randFloat(4.5, 5.5).toFixed(2));
+    recipe_moisture = Number(randFloat(5.8, 6.2).toFixed(2));
+    recipe_air_flow = Number(randFloat(5.5, 6.5).toFixed(2));
+    recipe_max_temp = randInt(1190, 1200);
+    recipe_humidity = randInt(45, 55);
+
+    kilnOut = Math.round(glazeOut * randFloat(0.958, 0.969));
+    kiln_air_cooling = Number(randFloat(4.5, 5.5).toFixed(2));
+    kiln_moisture = Number(randFloat(5.8, 6.2).toFixed(2));
+    kiln_air_flow = Number(randFloat(5.5, 6.5).toFixed(2));
+    kiln_max_temp = randInt(1190, 1200);
+    kiln_humidity = randInt(45, 55);
+    delta_air_cooling = Number(randFloat(-0.5, 0.5).toFixed(2));
+    delta_moisture = Number(randFloat(-0.2, 0.2).toFixed(2));
+    delta_air_flow = Number(randFloat(-0.3, 0.3).toFixed(2));
+    delta_max_temp = Number(randFloat(-2, 2).toFixed(2));
+    delta_humidity = Number(randFloat(-5, 5).toFixed(2));
+
+    sortOut = Math.round(kilnOut * randFloat(0.89, 0.92));
+
+    // For each running stage, populate only the previous-stage fields
+    runningStages.forEach(stage => {
+      const stageIdx = STAGES.indexOf(stage);
+      const example = {};
+      // Start fields (always included)
+      example['datetime'] = dt.toISOString().slice(0,16);
+      example['recipe_id'] = rid;
+      example['gloss_type'] = glossType;
+      example['gloss_amount_target_g_per_tile'] = glossAmt;
+      example['vol_start'] = start;
+
+      // Press: only Start fields + Press input fields (NOT vol_press_out)
+      if (stageIdx >= 1) {
+        // Only populate input fields for Press stage, NOT output
+        // Do NOT include vol_press_out (own output) for Press
+        example['target_pressure'] = target_pressure;
+        example['actual_pressure'] = actual_pressure;
+        example['layers_tossed'] = layers_tossed;
+        example['desired_thickness'] = desired_thickness;
+      }
+      // Glaze: include Start + Press data, NOT Glaze output fields
+      if (stageIdx >= 2) {
+        // Populate Press output so Glaze can use it, but not Glaze output
+        example['vol_press_out'] = pressOut;
+        // Glaze input fields (NOT vol_glaze_out)
+        example['recipe_air_cooling'] = recipe_air_cooling;
+        example['recipe_moisture'] = recipe_moisture;
+        example['recipe_air_flow'] = recipe_air_flow;
+        example['recipe_max_temp'] = recipe_max_temp;
+        example['recipe_humidity'] = recipe_humidity;
+      }
+      // Kiln: include Start + Press + Glaze data, NOT Kiln output fields
+      if (stageIdx >= 3) {
+        // Populate Glaze output so Kiln can use it, but not Kiln output
+        example['vol_glaze_out'] = glazeOut;
+        // Kiln input fields (NOT vol_kiln_out)
+        example['kiln_air_cooling'] = kiln_air_cooling;
+        example['kiln_moisture'] = kiln_moisture;
+        example['kiln_air_flow'] = kiln_air_flow;
+        example['kiln_max_temp'] = kiln_max_temp;
+        example['kiln_humidity'] = kiln_humidity;
+        example['delta_air_cooling'] = delta_air_cooling;
+        example['delta_moisture'] = delta_moisture;
+        example['delta_air_flow'] = delta_air_flow;
+        example['delta_max_temp'] = delta_max_temp;
+        example['delta_humidity'] = delta_humidity;
+      }
+      // Sort: include everything up to Kiln, NOT Sort output fields
+      if (stageIdx >= 4) {
+        // Populate Kiln output so Sort can use it, but not Sort output
+        example['vol_kiln_out'] = kilnOut;
+        // No additional input fields for Sort in current schema
+      }
+
+      // Remove current stage's own output field (vol_*_out for that stage)
+      if (stage === 'Press')   example['vol_press_out'] = '';
+      if (stage === 'Glaze')   example['vol_glaze_out'] = '';
+      if (stage === 'Kiln')    example['vol_kiln_out'] = '';
+      if (stage === 'Sort')    example['vol_sort_out'] = '';
+
+      // Fill missing fields as blank
+      fields.forEach(f => {
+        if (!(f in example)) example[f] = '';
       });
-    }
-    // Set Start section required fields first
-    setVal('datetime', dt.toISOString().slice(0,16)); // set input, but will show as local in field
-    setVal('recipe_id', rid);
-    setVal('gloss_type', ['shiny','matte','satin'][randInt(0,2)]);
-    setVal('gloss_amount_target_g_per_tile', randFloat(10, 25).toFixed(1));
-    setVal('vol_start', start);
 
-    // Now clear all other fields except Start section
-    // Only clear fields that are NOT Start section
-    const startFields = [
-      'datetime', 'recipe_id', 'gloss_type', 'gloss_amount_target_g_per_tile', 'vol_start'
-    ];
-    fields.forEach(id => {
-      if (!startFields.includes(id)) setVal(id, '');
+      stageExamples[stage] = example;
     });
 
-    // Optional inputs and "actuals" up to the chosen stage
-    if(stageIdx >= 1){
-      setVal('vol_press_out', Math.round(start * randFloat(0.987, 0.994)));
-      setVal('target_pressure', Math.round(randFloat(3000, 3200)));
-      setVal('actual_pressure', Math.round(randFloat(2950, 3250)));
-      setVal('layers_tossed', randInt(0, 2));
-      setVal('desired_thickness', randFloat(7.5, 8.5).toFixed(2));
-    }
-    if(stageIdx >= 2){
-      setVal('vol_glaze_out', Math.round(Number($('vol_press_out').value) * randFloat(0.988, 0.993)));
-      setVal('recipe_air_cooling', randFloat(4.5, 5.5).toFixed(2));
-      setVal('recipe_moisture', randFloat(5.8, 6.2).toFixed(2));
-      setVal('recipe_air_flow', randFloat(5.5, 6.5).toFixed(2));
-      setVal('recipe_max_temp', randInt(1190, 1200));
-      setVal('recipe_humidity', randInt(45, 55));
-    }
-    if(stageIdx >= 3){
-      setVal('vol_kiln_out', Math.round(Number($('vol_glaze_out').value) * randFloat(0.958, 0.969)));
-      setVal('kiln_air_cooling', randFloat(4.5, 5.5).toFixed(2));
-      setVal('kiln_moisture', randFloat(5.8, 6.2).toFixed(2));
-      setVal('kiln_air_flow', randFloat(5.5, 6.5).toFixed(2));
-      setVal('kiln_max_temp', randInt(1190, 1200));
-      setVal('kiln_humidity', randInt(45, 55));
-      setVal('delta_air_cooling', randFloat(-0.5, 0.5).toFixed(2));
-      setVal('delta_moisture', randFloat(-0.2, 0.2).toFixed(2));
-      setVal('delta_air_flow', randFloat(-0.3, 0.3).toFixed(2));
-      setVal('delta_max_temp', randFloat(-2, 2).toFixed(2));
-      setVal('delta_humidity', randFloat(-5, 5).toFixed(2));
-      setVal('vol_sort_out', Math.round(Number($('vol_kiln_out').value) * randFloat(0.89, 0.92)));
-    }
+    STAGES.forEach(s => {
+      stageRunStatus[s] = runningStages.includes(s) ? 'running' : 'idle';
+    });
 
-    // Always set Start badge and ensure blocked status if not predicted yet
-    setBadges(['blocked','blocked','blocked','blocked']);
-
-    // Show the Start datetime in a locale-friendly way in the status if desired
-    const labels = ['Start only','Up to Press','Up to Glaze','Up to Kiln'];
-    $('statusText').textContent = `Example loaded: ${labels[stageIdx]} (ID ${rid}, Start ${formatDateLocal(dt)}). Click Predict.`;
+    updateStageRunStatus();
+    if (runningStages.length > 0) setActiveStage(runningStages[0]);
+    $('statusText').textContent = `Example generated — Running: ${runningStages.join(', ')}`;
+    predictNow();
   }
 
   // Events
-  document.getElementById('btnPredict').addEventListener('click', predictNow);
-  document.getElementById('btnReset').addEventListener('click', resetAll);
-  document.getElementById('btnExample').addEventListener('click', loadExample);
+  // Remove separate Predict and Reset button event listeners (if present)
+  // Only keep Generate & Predict Example
+  if (document.getElementById('btnExample')) {
+    document.getElementById('btnExample').addEventListener('click', loadExample);
+  }
 
   // Boot
   resetAll();
