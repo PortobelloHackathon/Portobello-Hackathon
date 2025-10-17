@@ -648,18 +648,17 @@ def predict(payload):
     modelLoaded=true; $('statusText').textContent='Model loaded';
 
 $('btnRun').disabled = false;
-document.getElementById('btnRun').addEventListener('click', onGenerate);
 
     // Attach click events so they actually trigger predictions
     document.getElementById('btnRun').addEventListener('click', onGenerate);
 
     // Enable the run button now that we're ready
-    const runBtn = $('btnExample');
+    const runBtn = $('btnRun');
     if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Call Next Cycle'; }
   }catch(e){
     $('statusText').textContent='Python/model failed.';
     logDebug(e.toString());
-    const runBtn = $('btnExample');
+    const runBtn = $('btnRun');
     if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Model unavailable'; }
     $('btnGood').disabled = true;
     $('btnBad').disabled = true;
@@ -760,7 +759,7 @@ async function runOneRowProgressively(row){
   if(!modelLoaded) { $('statusText').textContent='Model not loaded'; return; }
 
   // disable button during run
-  const runBtn = $('btnExample');
+  const runBtn = $('btnRun');
   if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Running…'; }
 
   simRunning=true; resetUI(); currentRow=row;
@@ -828,7 +827,7 @@ async function onGenerate(){
   if(simRunning){ simRunning=false; } // stop any current run
   try{
     // Disable immediately to avoid double clicks
-    const runBtn = $('btnExample');
+    const runBtn = $('btnRun');
     if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Preparing…'; }
 
     if(!cachedRows){
@@ -842,13 +841,13 @@ async function onGenerate(){
   }catch(e){
     $('statusText').textContent='Failed to load/use endpoints.csv';
     logDebug(e.toString());
-    const runBtn = $('btnExample');
+    const runBtn = $('btnRun');
     if (runBtn && modelLoaded) { runBtn.disabled = false; runBtn.textContent = 'Call Next Cycle'; }
   }
 }
 
 function initUI(){
-  const btn=$('btnExample'); if(btn) btn.addEventListener('click', onGenerate);
+  const btn=$('btnRun'); if(btn) btn.addEventListener('click', onGenerate);
   const lt=$('layers_tossed'); if(lt){ lt.value=24; lt.readOnly=true; lt.title='Fixed at 24 tiles'; }
 }
 
@@ -861,8 +860,3 @@ function initUI(){
 </script>
 </body>
 </html>
-ag
-    predictNow();
-  });
-
-  resetBoot();
