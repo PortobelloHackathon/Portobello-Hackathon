@@ -567,7 +567,7 @@ def predict(payload):
       modelMeta.recipeSetpoints = JSON.parse(rpJson);
     }catch(e){ console.warn('Could not extract recipe_setpoints', e); }
     modelLoaded=true;
-    wf.els.status.textContent='Model loaded ✅';
+    wf.els.status.textContent='Model loaded';
     console.log('Model metadata:', modelMeta);
   }catch(e){
     console.error(e);
@@ -802,7 +802,7 @@ async function runWF(){
   updateChartFromStages(res.stages);
   updateEndTime();
   updateAI(payload, res);
-  wf.els.status.textContent = 'Prediction done ✅';
+  wf.els.status.textContent = 'Prediction done';
 }
 $('wfRun').addEventListener('click', runWF);
 
@@ -996,7 +996,7 @@ async function initialRun(){
     tries++;
   }
   if (modelLoaded) {
-    wf.els.status.textContent = 'Ready ✅';
+    wf.els.status.textContent = 'Ready';
   } else {
     wf.els.status.textContent = 'Model unavailable — using fallback';
   }

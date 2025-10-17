@@ -1,9 +1,10 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Portobello Dashboard — Predictive (Client-only, auto-load ml_model.joblib)</title>
+  <title>Portobello Dashboard — Live Per-Stage Predictions (CSV actuals)</title>
 
   <!-- Inter font -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,12 +19,8 @@
           fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
           colors: {
             pbBlue: '#0B1F52',
-            pbSlate: '#6B7280',
             pbGrayLight: '#CFD3DA',
-            pbGrayMid:   '#7C8390',
             pbGrayDark:  '#434A52',
-            stageActual: '#16A34A',  // green
-            stagePred:   '#F4B000',  // yellow
           }
         }
       }
@@ -33,47 +30,34 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <!-- Pyodide (Python in the browser) -->
+  <!-- Pyodide -->
   <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
 </head>
 
 <body class="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
   <!-- HEADER -->
-  <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
+  <header class="bg-gradient-to-r from-pbGrayLight via-slate-400/50 to-pbBlue">
     <div class="relative w-full py-5 pl-3 flex items-center">
-      <!-- Left: Logo with tiny left padding -->
-      <a href="/" class="shrink-0">
-        <img
-          src="assets/images/logo_portobello_america_CORES_pantone_655.png"
-          alt="Portobello America"
-          class="h-16 w-auto object-contain block"
-        />
-      </a>
-
-      <!-- Center: Title (stays perfectly centered regardless of logo width) -->
-      <h1
-        class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none"
-      >
+      <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-16 w-auto object-contain block" />
+      <h1 class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none">
         Tile Material Dashboard
       </h1>
-
-      <!-- Right: Spacer for symmetry / future actions -->
       <div class="ml-auto"></div>
     </div>
   </header>
 
+  <!-- LAYOUT -->
   <div class="flex flex-1 overflow-hidden">
+    <!-- Sidebar (in separate file) -->
     <script src="sidebar.js" defer></script>
 
     <!-- MAIN -->
     <main class="flex-1 overflow-auto">
-      <div class="mx-auto max-w-7xl px-8 py-8">
-        <!-- ======== PANEL: PREDICTIONS (active) ======== -->
+      <div class="mx-auto max-w-7xl px-6 md:px-8 py-8">
         <section id="panel-predictions">
           <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Predictions</h2>
 
-
-          <!-- TOP STATUS -->
+          <!-- STATUS -->
           <section class="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
             <div class="flex flex-wrap items-start gap-3 justify-between">
               <div>
@@ -85,32 +69,39 @@
                 </details>
               </div>
               <div class="flex items-center gap-2">
-                <button id="btnExample" class="px-3 py-1.5 rounded bg-pbBlue text-white font-semibold">Generate & Predict Example</button>
+                <!-- Disabled by default; becomes enabled once model loads -->
+                <button
+                  id="btnExample"
+                  class="px-3 py-2 rounded bg-pbBlue text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled
+                >
+                  Loading model…
+                </button>
               </div>
             </div>
           </section>
 
-          <!-- Inputs by Stage -->
+          <!-- INPUTS -->
           <section class="mt-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
             <div class="flex flex-wrap items-start gap-3 justify-between">
               <div>
                 <h3 class="text-lg font-semibold text-slate-800">Inputs by Stage</h3>
-                <p id="inputHint" class="text-sm text-slate-500 mt-1">Enter Start (required). Add actuals to lock a stage (green), or provide inputs to unlock predictions (yellow).</p>
               </div>
-              <div class="flex items-center gap-2 text-xs text-slate-500">
-                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Actual</span>
-                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#F4B000"></span> Predicted</span>
-                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
+              <div class="flex items-center gap-3 text-xs text-slate-500">
+                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Passed</span>
+                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#ef4444"></span> Failed</span>
+                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (latest)</span>
+                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Pinned Min</span>
               </div>
             </div>
 
-            <!-- Grid of inputs -->
-            <div class="mt-4 grid grid-cols-12 gap-4">
+            <!-- 5 equal columns on xl so all five cards show on one row -->
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
               <!-- START -->
-              <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
+              <div class="rounded-xl border p-3">
                 <div class="flex items-center justify-between mb-2">
                   <h4 class="font-semibold">Start</h4>
-                  <span id="badgeStart" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
+                  <span id="badgeStart" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">—</span>
                 </div>
                 <label class="block text-sm mb-1">Datetime</label>
                 <input id="datetime" type="datetime-local" class="w-full border rounded p-2 mb-2" />
@@ -124,20 +115,21 @@
                   <option value="247">247</option>
                 </select>
                 <label class="block text-sm mb-1">Gloss Type</label>
-                <input id="gloss_type" type="text" class="w-full border rounded p-2 mb-2" placeholder="e.g. shiny, matte" />
+                <input id="gloss_type" type="text" class="w-full border rounded p-2 mb-2" placeholder="e.g. polish_P1" />
                 <label class="block text-sm mb-1">Gloss Amount Target (g/tile)</label>
                 <input id="gloss_amount_target_g_per_tile" type="number" class="w-full border rounded p-2 mb-2" />
                 <label class="block text-sm mb-1">Start Volume</label>
                 <input id="vol_start" type="number" class="w-full border rounded p-2" placeholder="required" />
               </div>
+
               <!-- PRESS -->
-              <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
+              <div class="rounded-xl border p-3">
                 <div class="flex items-center justify-between mb-2">
                   <h4 class="font-semibold">Press</h4>
-                  <span id="badgePress" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
+                  <span id="badgePress" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">—</span>
                 </div>
-                <label class="block text-sm mb-1">Press Output (actual, optional)</label>
-                <input id="vol_press_out" type="number" class="w-full border rounded p-2 mb-2" placeholder="if known, overrides model" />
+                <label class="block text-sm mb-1">Press Output (actual)</label>
+                <input id="vol_press_out" type="number" class="w-full border rounded p-2 mb-2" />
                 <label class="block text-sm mb-1">Target Pressure</label>
                 <input id="target_pressure" type="number" class="w-full border rounded p-2 mb-2" />
                 <label class="block text-sm mb-1">Actual Pressure</label>
@@ -147,14 +139,15 @@
                 <label class="block text-sm mb-1">Desired Thickness</label>
                 <input id="desired_thickness" type="number" class="w-full border rounded p-2 mb-2" />
               </div>
+
               <!-- GLAZE -->
-              <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
+              <div class="rounded-xl border p-3">
                 <div class="flex items-center justify-between mb-2">
                   <h4 class="font-semibold">Glaze</h4>
-                  <span id="badgeGlaze" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
+                  <span id="badgeGlaze" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">—</span>
                 </div>
-                <label class="block text-sm mb-1">Glaze Output (actual, optional)</label>
-                <input id="vol_glaze_out" type="number" class="w-full border rounded p-2 mb-2" placeholder="if known, overrides model" />
+                <label class="block text-sm mb-1">Glaze Output (actual)</label>
+                <input id="vol_glaze_out" type="number" class="w-full border rounded p-2 mb-2" />
                 <label class="block text-sm mb-1">Recipe Air Cooling</label>
                 <input id="recipe_air_cooling" type="number" class="w-full border rounded p-2 mb-2" />
                 <label class="block text-sm mb-1">Recipe Moisture</label>
@@ -166,41 +159,96 @@
                 <label class="block text-sm mb-1">Recipe Humidity</label>
                 <input id="recipe_humidity" type="number" class="w-full border rounded p-2 mb-2" />
               </div>
-              <!-- KILN -->
-              <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
+
+              <!-- KILN (2 x 6 layout) -->
+              <div class="rounded-xl border p-3">
                 <div class="flex items-center justify-between mb-2">
                   <h4 class="font-semibold">Kiln</h4>
-                  <span id="badgeKiln" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
+                  <span id="badgeKiln" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">—</span>
                 </div>
-                <label class="block text-sm mb-1">Kiln Output (actual, optional)</label>
-                <input id="vol_kiln_out" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Kiln Air Cooling</label>
-                <input id="kiln_air_cooling" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Kiln Moisture</label>
-                <input id="kiln_moisture" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Kiln Air Flow</label>
-                <input id="kiln_air_flow" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Kiln Max Temp</label>
-                <input id="kiln_max_temp" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Kiln Humidity</label>
-                <input id="kiln_humidity" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Delta Air Cooling</label>
-                <input id="delta_air_cooling" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Delta Moisture</label>
-                <input id="delta_moisture" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Delta Air Flow</label>
-                <input id="delta_air_flow" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Delta Max Temp</label>
-                <input id="delta_max_temp" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Delta Humidity</label>
-                <input id="delta_humidity" type="number" class="w-full border rounded p-2 mb-2" />
-                <label class="block text-sm mb-1">Sort Output (optional)</label>
-                <input id="vol_sort_out" type="number" class="w-full border rounded p-2 mb-2" />
+
+                <!-- 2 columns x up to 6 rows (12 slots) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-sm mb-1">Kiln Output (actual)</label>
+                    <input id="vol_kiln_out" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-sm mb-1">Kiln Air Cooling</label>
+                    <input id="kiln_air_cooling" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-sm mb-1">Kiln Moisture</label>
+                    <input id="kiln_moisture" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-sm mb-1">Kiln Air Flow</label>
+                    <input id="kiln_air_flow" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-sm mb-1">Kiln Max Temp</label>
+                    <input id="kiln_max_temp" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-sm mb-1">Kiln Humidity</label>
+                    <input id="kiln_humidity" type="number" class="w-full border rounded p-2" />
+                  </div>
+
+                  <div>
+                    <label class="block text-sm mb-1">Delta Air Cooling</label>
+                    <input id="delta_air_cooling" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-sm mb-1">Delta Moisture</label>
+                    <input id="delta_moisture" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-sm mb-1">Delta Air Flow</label>
+                    <input id="delta_air_flow" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-sm mb-1">Delta Max Temp</label>
+                    <input id="delta_max_temp" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-sm mb-1">Delta Humidity</label>
+                    <input id="delta_humidity" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <!-- 12th slot intentionally left unused so the grid balances nicely -->
+                  <div class="hidden md:block"></div>
+                </div>
+              </div>
+
+              <!-- SORT / END (5th box) -->
+              <div class="rounded-xl border p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="font-semibold">Sort / End</h4>
+                  <span id="badgeSort" class="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700">—</span>
+                </div>
+                <p class="text-xs text-slate-500 mb-2">Pass if ≥ 90% of Kiln output</p>
+                <!-- End Volume is derived and read-only -->
+                <label class="block text-sm mb-1">End Volume</label>
+                <input id="end_volume" type="number" class="w-full border rounded p-2 mb-2" readonly />
               </div>
             </div>
           </section>
-<!-- (…your existing <head> and body header/sidebar unchanged…) -->
 
+          <!-- CHART -->
+          <div class="mt-6 grid grid-cols-12 gap-4">
+            <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[26rem]">
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold text-slate-800">Material Loss Per Stage</h3>
+                <div class="flex items-center gap-3 text-xs text-slate-500">
+                  <span id="startVolTag" class="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 text-slate-700">Start: —</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Passed</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#ef4444"></span> Failed</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (latest)</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Pinned Min</span>
+                </div>
+              </div>
+              <canvas id="lossLineChart" class="w-full h-full"></canvas>
+            </section>
+          </div>
 <!-- CHART -->
 <div class="mt-6 grid grid-cols-12 gap-4">
   <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-64 md:h-[24rem]">
@@ -216,313 +264,244 @@
   </section>
 </div>
 
-<!-- NEW: Flags panel -->
-<section id="flagsPanel" class="mt-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 hidden">
-  <div class="flex items-center justify-between">
-    <h3 class="text-lg font-semibold text-slate-800">Stage Flags</h3>
-    <span id="flagBadge" class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 font-semibold hidden">Flags: 0</span>
+          <!-- FLAGS -->
+          <section id="flagsPanel" class="mt-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 hidden">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-slate-800">Stage Flags</h3>
+              <span id="flagBadge" class="text-xs px-2 py-1 rounded bg-red-100 text-red-700 font-semibold hidden">Flags: 0</span>
+            </div>
+            <ul id="flagList" class="mt-2 list-disc pl-6 text-sm text-red-700"></ul>
+          </section>
+        </section>
+      </div>
+    </main>
   </div>
-  <ul id="flagList" class="mt-2 list-disc pl-6 text-sm text-red-700"></ul>
-</section>
 
 <script>
-  // ---------- Tab logic (unchanged) ----------
-  const tabButtons = document.querySelectorAll('.tablink');
-  const panels = {
-    predictions: document.getElementById('panel-predictions'),
-    analytics:   document.getElementById('panel-analytics'),
-    data:        document.getElementById('panel-data'),
-  };
-  function setActiveTab(nameRaw){
-    const name = (nameRaw || 'predictions').toLowerCase();
-    const panel = panels[name] || panels['predictions'];
-    Object.values(panels).forEach(p => p && p.classList.add('hidden'));
-    if (panel) panel.classList.remove('hidden');
-    tabButtons.forEach(btn => {
-      const isActive = (btn.dataset.tab || '').toLowerCase() === name;
-      btn.className = 'tablink flex items-center px-5 py-3 rounded-r-full mb-2 transition ' +
-        (isActive ? 'bg-[#0b1f52] text-white font-semibold shadow-sm'
-                  : 'text-slate-700 hover:bg-slate-200');
-      if (isActive) btn.setAttribute('aria-current','page'); else btn.removeAttribute('aria-current');
-    });
-  }
-  tabButtons.forEach(btn => btn.addEventListener('click', () => setActiveTab(btn.dataset.tab)));
-  setActiveTab('predictions');
+/* =================== Globals & Helpers =================== */
+const STAGES = ['Start','Press','Glaze','Kiln','Sort'];
+const PASS='#16A34A', FAIL='#ef4444', INCOMPLETE='#F4B000', GRID='#CFD3DA';
+const TEN_SECONDS = 10000;
+const ENDPOINTS_CSV_URL = 'endpoints.csv';
+const MODEL_URL  = 'ml_model.joblib';
+const MODEL_PATH = '/tmp/ml_model.joblib';
 
-  // ---------- Stages + chart ----------
-  const STAGES = ['Start','Press','Glaze','Kiln','Sort'];
-  const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
+function logDebug(m){ const el=$('debugLog'); el.textContent += (typeof m==='string'?m:JSON.stringify(m,null,2))+'\n'; el.scrollTop=el.scrollHeight; }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function fmt(n){ return (n==null||!isFinite(n))?'-':Number(n).toLocaleString(); }
+function coerceNumber(x){ const n=Number(x); return Number.isFinite(n)?n:null; }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function toDatetimeLocal(iso){ if(!iso)return''; const d=new Date(iso); if(Number.isNaN(+d))return''; return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
 
-  // fields we read for payload
-  const fields = [
-    'datetime','recipe_id','gloss_type','gloss_amount_target_g_per_tile',
-    'vol_start','vol_press_out','vol_glaze_out','vol_kiln_out','vol_sort_out',
-    'target_pressure','actual_pressure','layers_tossed','desired_thickness',
-    'recipe_air_cooling','recipe_moisture','recipe_air_flow','recipe_max_temp','recipe_humidity',
-    'kiln_air_cooling','kiln_moisture','kiln_air_flow','kiln_max_temp','kiln_humidity',
-    'delta_air_cooling','delta_moisture','delta_air_flow','delta_max_temp','delta_humidity'
-  ];
-  function setVal(id,v){
-    const el = $(id);
-    if(!el) return;
-    if(el.tagName === 'SELECT'){
-      el.value = (v==null||v==='') ? '' : String(v);
+const fields = [
+  'datetime','recipe_id','gloss_type','gloss_amount_target_g_per_tile',
+  'vol_start','vol_press_out','vol_glaze_out','vol_kiln_out','vol_sort_out',
+  'target_pressure','actual_pressure','layers_tossed','desired_thickness',
+  'recipe_air_cooling','recipe_moisture','recipe_air_flow','recipe_max_temp','recipe_humidity',
+  'kiln_air_cooling','kiln_moisture','kiln_air_flow','kiln_max_temp','kiln_humidity',
+  'delta_air_cooling','delta_moisture','delta_air_flow','delta_max_temp','delta_humidity',
+  'end_volume'
+];
+function setVal(id,v){
+  const el=$(id); if(!el) return;
+  if(el.tagName==='SELECT'){ el.value = (v==null||v==='')?'':String(v); return; }
+  if(el.type==='number'){ const n=Number(v); el.value = Number.isFinite(n)?n:''; return; }
+  el.value = (v==null||v==='')?'':String(v);
+}
+function getPayloadFromUI(){
+  const numeric=new Set(['gloss_amount_target_g_per_tile','vol_start','vol_press_out','vol_glaze_out','vol_kiln_out','vol_sort_out','target_pressure','actual_pressure','layers_tossed','desired_thickness','recipe_air_cooling','recipe_moisture','recipe_air_flow','recipe_max_temp','recipe_humidity','kiln_air_cooling','kiln_moisture','kiln_air_flow','kiln_max_temp','kiln_humidity','delta_air_cooling','delta_moisture','delta_air_flow','delta_max_temp','delta_humidity']);
+  const p={};
+  fields.forEach(k=>{ if(k==='end_volume') return; const el=$(k); if(!el||el.value===''){ p[k]=null; } else { p[k]= numeric.has(k)?(Number(el.value)||null):el.value; }});
+  return p;
+}
+
+/* =================== CSV =================== */
+function parseCSV(text){
+  const rows=[]; let i=0, field='', rec=[], inQ=false;
+  const push=()=>{ rec.push(field); field=''; };
+  while(i<=text.length){
+    const c=text[i]||'\n';
+    if(inQ){
+      if(c=='"'){ if(text[i+1]=='"'){ field+='"'; i++; } else { inQ=false; } }
+      else { field+=c; }
     }else{
-      el.value = (v==null||Number.isNaN(v))?'':v;
+      if(c=='"'){ inQ=true; }
+      else if(c==','){ push(); }
+      else if(c=='\n' || c=='\r'){ if(c=='\r'&&text[i+1]=='\n') i++; push(); if(rec.length>1 || rec[0]!=='') rows.push(rec); rec=[]; }
+      else { field+=c; }
     }
+    i++;
   }
-  function logDebug(msg){
-    const el = $('debugLog');
-    if (!el) return;
-    el.textContent += (typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2)) + '\n';
-    el.scrollTop = el.scrollHeight;
-  }
+  if(rec.length) rows.push(rec);
+  if(!rows.length) return [];
+  const header=rows[0];
+  return rows.slice(1).map(r=>{ const o={}; header.forEach((h,idx)=>o[h.trim()]=(r[idx]??'').trim()); return o; });
+}
+async function loadCSVRows(){
+  const r=await fetch(ENDPOINTS_CSV_URL,{cache:'no-store'});
+  if(!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return parseCSV(await r.text());
+}
 
-  const PB_GRAY_L='#CFD3DA';
-  const ACTUAL = '#16A34A', PRED='#F4B000', FUTURE='#0B1F52', FLAG_RED='#ef4444';
+/* =================== Chart =================== */
+Chart.defaults.font.family='Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+Chart.defaults.color = '#434A52';
+Chart.defaults.plugins.legend.display=false;
 
-  Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-  Chart.defaults.color = '#434A52';
-  Chart.defaults.plugins.legend.display = false;
+let lastVols=[null,null,null,null,null];  // model path
+let lastMins=[null,null,null,null,null];  // live mins
+let PINNED_MINS=[null,null,null,null,null]; // pinned at reveal
+let failFlags=[false,false,false,false,false];
+let stageOutcome=['—','—','—','—','—']; // Passed/Failed after run
+let revealed=[false,false,false,false,false];
+let currentRow=null;
 
-  let stageStatus = ['future','future','future','future','future'];
-  let lastVols = [null,null,null,null,null];
-  let lastMins = [null,null,null,null,null];
+function colorForPoint(i){
+  const o=stageOutcome[i];
+  if(o==='Passed') return PASS;
+  if(o==='Failed') return FAIL;
+  return INCOMPLETE; // pre-judgement color
+}
 
-  function colorFor(i){ return stageStatus[i]==='actual'?ACTUAL:(stageStatus[i]==='pred'?PRED:FUTURE); }
-  const fmt = n => (n==null||!isFinite(n)) ? '-' : n.toLocaleString();
-
-  const lossLineChart = new Chart(document.getElementById('lossLineChart'), {
-    type:'line',
-    data:{
-      labels: STAGES,
-      datasets:[
-        { // Volume line
-          label:'Volume',
-          data:[null,null,null,null,null],
-          borderWidth:2, tension:0.3, fill:false,
-          segment:{ borderColor:(ctx)=>colorFor(ctx.p0DataIndex) },
-          pointBackgroundColor:(ctx)=>colorFor(ctx.dataIndex),
-          pointRadius:4, pointHoverRadius:6
-        },
-        { // Min Required (dashed)
-          label:'Min Required',
-          data:[null,null,null,null,null],
-          borderWidth:1.5, borderDash:[6,6],
-          borderColor:PRED, pointRadius:0, tension:0.3, fill:false
-        },
-        { // NEW: Flag markers overlay
-          label:'Flags',
-          data:[null,null,null,null,null],
-          showLine:false,
-          pointRadius:7,
-          pointHoverRadius:8,
-          borderWidth:0,
-          pointBackgroundColor: FLAG_RED
-        }
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      scales:{
-        x:{ grid:{ display:false } },
-        y:{ beginAtZero:true, grid:{ color:PB_GRAY_L } }
+const lossLineChart = new Chart(document.getElementById('lossLineChart'), {
+  type:'line',
+  data:{
+    labels: STAGES,
+    datasets:[
+      { // Volume path (actuals where revealed; predictions elsewhere)
+        label:'Volume',
+        data:[null,null,null,null,null],
+        borderWidth:2, tension:0.3, fill:false,
+        segment:{ borderColor:(ctx)=>colorForPoint(ctx.p0DataIndex) },
+        pointBackgroundColor:(ctx)=>colorForPoint(ctx.dataIndex),
+        pointRadius:4, pointHoverRadius:6
       },
-      plugins:{
-        tooltip:{
-          callbacks:{
-            title:(items)=>{
-              const i = items[0].dataIndex;
-              return `Stage ${i+1} — ${STAGES[i]}`;
-            },
-            label:(item)=>{
-              const i = item.dataIndex;
-              const val = lastVols[i];
-              const status = stageStatus[i]==='actual' ? 'Actual'
-                            : stageStatus[i]==='pred'   ? 'Predicted'
-                            : 'Future';
-              if(val==null) return 'No data';
-              return `Value: ${fmt(val)} (${status})`;
-            },
-            afterLabel:(item)=>{
-              const i = item.dataIndex;
-              const start = lastVols[0];
-              const val   = lastVols[i];
-              const minV  = lastMins[i];
-              if(start==null || val==null) return '';
-              const loss  = Math.max(0, start - val);
-              const pct   = start>0 ? (loss/start*100) : 0;
-              const lines = [`Loss vs Start: ${fmt(loss)} (${pct.toFixed(2)}%)`];
-              if(minV!=null && stageStatus[i]==='pred'){
-                lines.push(`Min Required: ${fmt(minV)}`);
-              }
-              return '\n' + lines.join('\n');
+      { // Min (latest)
+        label:'Min (latest)',
+        data:[null,null,null,null,null],
+        borderWidth:1.5, borderDash:[6,6], borderColor:'#F4B000',
+        pointRadius:0, tension:0.3, fill:false
+      },
+      { // Pinned Min (judgement reference)
+        label:'Pinned Min',
+        data:[null,null,null,null,null],
+        borderWidth:1.5, borderDash:[6,6],
+        segment:{ borderColor:(ctx)=> failFlags[ctx.p0DataIndex] ? '#ef4444' : '#9ca3af' },
+        pointRadius:0, tension:0.3, fill:false
+      },
+      { // Fail markers
+        label:'Flags',
+        data:[null,null,null,null,null],
+        showLine:false, pointRadius:7, pointHoverRadius:8, borderWidth:0,
+        pointBackgroundColor:'#ef4444'
+      }
+    ]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    scales:{ x:{grid:{display:false}}, y:{beginAtZero:true, grid:{color:GRID}} },
+    plugins:{
+      tooltip:{
+        callbacks:{
+          title:(items)=>`Stage ${items[0].dataIndex+1} — ${STAGES[items[0].dataIndex]}`,
+          label:(item)=>{
+            const i=item.dataIndex;
+            const out=stageOutcome[i];
+            const val=lossLineChart.data.datasets[0].data[i];
+            return `Status: ${out} — Value: ${fmt(val)}`;
+          },
+          afterLabel:(item)=>{
+            const i=item.dataIndex;
+            const start=lossLineChart.data.datasets[0].data[0];
+            const val  =lossLineChart.data.datasets[0].data[i];
+            const liveMin = lastMins[i];
+            const pinned  = PINNED_MINS[i];
+            const endVal  = lossLineChart.data.datasets[0].data[4];
+            const lines=[];
+            if(start!=null && val!=null){
+              const loss=Math.max(0,start-val);
+              const pct=start>0?(loss/start*100):0;
+              lines.push(`Loss vs Start: ${fmt(loss)} (${pct.toFixed(2)}%)`);
             }
+            if(liveMin!=null)   lines.push(`Min (latest): ${fmt(liveMin)}`);
+            if(pinned!=null)    lines.push(`Pinned Min: ${fmt(pinned)}`);
+            if(endVal!=null)    lines.push(`End: ${fmt(endVal)}`);
+            return lines.length?'\n'+lines.join('\n'):'';
           }
         }
       }
     }
+  }
+});
+
+function composeDisplayVols(){
+  const out = lastVols.slice();
+  if(!currentRow) return out;
+  const actuals = [
+    coerceNumber(currentRow.vol_start),
+    coerceNumber(currentRow.vol_press_out),
+    coerceNumber(currentRow.vol_glaze_out),
+    coerceNumber(currentRow.vol_kiln_out),
+    coerceNumber(currentRow.vol_sort_out),
+  ];
+  for(let i=0;i<STAGES.length;i++){
+    if(revealed[i] && actuals[i]!=null){ out[i] = actuals[i]; }
+  }
+  return out;
+}
+
+function updateStartAndEndPills(displayVols){
+  const st = $('startVolTag');
+  st.textContent = `Start: ${fmt(displayVols[0])}`;
+  setVal('end_volume', displayVols[4]);
+}
+
+function refreshChart(){
+  const displayVols = composeDisplayVols();
+  lossLineChart.data.datasets[0].data = displayVols;
+  lossLineChart.data.datasets[1].data = lastMins.slice();
+  lossLineChart.data.datasets[2].data = PINNED_MINS.map(v=>v??null);
+  lossLineChart.data.datasets[3].data = displayVols.map((y,i)=> failFlags[i]&&y!=null ? y : null);
+  lossLineChart.update();
+  updateStartAndEndPills(displayVols);
+}
+
+function setBadges(){
+  const ids=['badgeStart','badgePress','badgeGlaze','badgeKiln','badgeSort']; // include Sort badge
+  ids.forEach((id,i)=>{
+    const txt = stageOutcome[i] || '—';
+    let cls='bg-slate-100 text-slate-700';
+    if(txt==='Passed'){ cls='bg-green-100 text-green-700'; }
+    if(txt==='Failed'){ cls='bg-red-100 text-red-700'; }
+    const el=$(id); if(el){ el.textContent=txt; el.className=`text-xs px-2 py-0.5 rounded ${cls}`; }
   });
+}
 
-  function updateChart(vols, mins, statuses){
-    stageStatus = statuses.slice();
-    lastVols = vols.slice();
-    lastMins = mins.slice();
-    lossLineChart.data.datasets[0].data = vols;
-    lossLineChart.data.datasets[1].data = mins;
-    // flag overlay dataset will be set in renderFlags()
-    lossLineChart.data.datasets[2].data = [null,null,null,null,null];
-    lossLineChart.update();
-  }
+/* =================== Flags panel (dedupe) =================== */
+let flaggedStages = new Set();
+function resetFlagsPanel(){
+  flaggedStages.clear();
+  $('flagList').innerHTML=''; $('flagsPanel').classList.add('hidden'); $('flagBadge').classList.add('hidden');
+}
+function addFlag(stage,msg){
+  if(flaggedStages.has(stage)) return;  // only 1 flag per stage
+  flaggedStages.add(stage);
+  const ul=$('flagList'); const li=document.createElement('li');
+  li.textContent=`${stage}: ${msg}`; ul.appendChild(li);
+  $('flagsPanel').classList.remove('hidden');
+  const b=$('flagBadge'); b.textContent=`Flags: ${ul.children.length}`; b.classList.remove('hidden');
+}
 
-  // Badges (top of each card)
-  function setBadges(states){
-    const ids = ['badgeStart','badgePress','badgeGlaze','badgeKiln'];
-    ids.forEach((id,i)=>{
-      const el = $(id);
-      if(!el) return;
-      const st = states?states[i]:null;
-      const txt = st?st:'blocked';
-      const cls = st==='actual' ? 'bg-green-100 text-green-700'
-               : st==='pred'   ? 'bg-amber-100 text-amber-700'
-               : 'bg-slate-100 text-slate-600';
-      el.textContent = txt;
-      el.className = `text-xs px-2 py-0.5 rounded ${cls}`;
-      el.classList.remove('ring','ring-red-400');
-    });
-  }
-
-  // NEW: thresholds & flag evaluation
-  const FLAG_THRESHOLDS = {
-    pressurePsi: 15,         // |actual - target| > 15 PSI → Press flag
-    deltaTempC: 5,           // |delta_max_temp| > 5°C → Kiln flag
-    humidityHigh: 8,         // kiln_humidity - recipe_humidity > 8 → Kiln flag
-    deltaMoisture: 0.05,     // |delta_moisture| > 0.05 → Kiln flag
-    deltaAirCooling: 1       // |delta_air_cooling| > 1 → Kiln flag
-  };
-
-  function num(x){
-    const n = Number(x);
-    return Number.isFinite(n) ? n : null;
-  }
-
-  function evaluateFlags(payload, vols, mins){
-    const flags = [];
-    // Helper to check actual vs predicted min for stage index i
-    function checkActualBelowMin(i, field, label){
-      const actual = num(payload[field]);
-      const minReq = mins[i] == null ? null : num(mins[i]);
-      if(actual != null && minReq != null && actual < minReq){
-        flags.push({ stageIdx:i, stage:STAGES[i], code:`${label}_below_min`, msg:`${label}: actual ${fmt(actual)} < min ${fmt(minReq)}`});
-      }
-    }
-
-    // PRESS
-    const ap = num(payload.actual_pressure), tp = num(payload.target_pressure);
-    if(ap!=null && tp!=null && Math.abs(ap - tp) > FLAG_THRESHOLDS.pressurePsi){
-      flags.push({ stageIdx:1, stage:'Press', code:'pressure_off', msg:`Press: |actual-target| = ${Math.abs(ap-tp).toFixed(0)} PSI > ${FLAG_THRESHOLDS.pressurePsi}`});
-    }
-    checkActualBelowMin(1, 'vol_press_out', 'Press output');
-
-    // GLAZE
-    checkActualBelowMin(2, 'vol_glaze_out', 'Glaze output');
-
-    // KILN (delta rules + min check)
-    const dTemp = num(payload.delta_max_temp);
-    if(dTemp!=null && Math.abs(dTemp) > FLAG_THRESHOLDS.deltaTempC){
-      flags.push({ stageIdx:3, stage:'Kiln', code:'temp_off', msg:`Kiln: |Δtemp| ${Math.abs(dTemp).toFixed(1)}°C > ${FLAG_THRESHOLDS.deltaTempC}°C`});
-    }
-    const dMoist = num(payload.delta_moisture);
-    if(dMoist!=null && Math.abs(dMoist) > FLAG_THRESHOLDS.deltaMoisture){
-      flags.push({ stageIdx:3, stage:'Kiln', code:'moist_off', msg:`Kiln: |Δmoisture| ${Math.abs(dMoist).toFixed(3)} > ${FLAG_THRESHOLDS.deltaMoisture}`});
-    }
-    const dCool = num(payload.delta_air_cooling);
-    if(dCool!=null && Math.abs(dCool) > FLAG_THRESHOLDS.deltaAirCooling){
-      flags.push({ stageIdx:3, stage:'Kiln', code:'cooling_off', msg:`Kiln: |Δair_cooling| ${Math.abs(dCool).toFixed(1)} > ${FLAG_THRESHOLDS.deltaAirCooling}`});
-    }
-    const recHum = num(payload.recipe_humidity), kilnHum = num(payload.kiln_humidity);
-    if(recHum!=null && kilnHum!=null && (kilnHum - recHum) > FLAG_THRESHOLDS.humidityHigh){
-      flags.push({ stageIdx:3, stage:'Kiln', code:'humidity_high', msg:`Kiln: humidity +${(kilnHum-recHum).toFixed(1)} > ${FLAG_THRESHOLDS.humidityHigh}`});
-    }
-    // airflow below setpoint
-    const recFlow = num(payload.recipe_air_flow), kilnFlow = num(payload.kiln_air_flow);
-    if(recFlow!=null && kilnFlow!=null && kilnFlow < recFlow){
-      flags.push({ stageIdx:3, stage:'Kiln', code:'airflow_low', msg:`Kiln: airflow ${kilnFlow} < recipe ${recFlow}`});
-    }
-    checkActualBelowMin(3, 'vol_kiln_out', 'Kiln output');
-
-    // SORT (actual vs min; and good_rate if both present)
-    checkActualBelowMin(4, 'vol_sort_out', 'Sort output');
-    const vk = num(payload.vol_kiln_out), vs = num(payload.vol_sort_out);
-    if(vk!=null && vs!=null){
-      const good = vk>0 ? vs/vk : null;
-      if(good!=null && good < 0.90){
-        flags.push({ stageIdx:4, stage:'Sort', code:'good_rate_low', msg:`Sort: good_rate ${(good*100).toFixed(1)}% < 90%`});
-      }
-    }
-
-    return flags;
-  }
-
-  function renderFlags(flags){
-    // reset flag styles
-    ['badgePress','badgeGlaze','badgeKiln'].forEach(id=>{
-      const el = $(id);
-      if(el) el.classList.remove('ring','ring-red-400');
-    });
-    $('flagList').innerHTML = '';
-    $('flagsPanel').classList.toggle('hidden', flags.length===0);
-    const badge = $('flagBadge');
-    if (badge){
-      if (flags.length>0){ badge.textContent = `Flags: ${flags.length}`; badge.classList.remove('hidden'); }
-      else { badge.classList.add('hidden'); }
-    }
-
-    // mark badges + list
-    const flaggedData = [null,null,null,null,null];
-    flags.forEach(f=>{
-      if (f.stageIdx>=1 && f.stageIdx<=3){
-        const map = ['badgeStart','badgePress','badgeGlaze','badgeKiln'];
-        const id = map[f.stageIdx];
-        const el = $(id);
-        if(el){ el.classList.add('ring','ring-red-400'); }
-      }
-      const li = document.createElement('li');
-      li.textContent = `${f.stage}: ${f.msg}`;
-      $('flagList').appendChild(li);
-
-      // put a red marker at the point (use lastVols so it lands exactly on current value)
-      const y = lastVols[f.stageIdx];
-      flaggedData[f.stageIdx] = (y==null ? null : y);
-    });
-
-    // update red flag markers on chart
-    lossLineChart.data.datasets[2].data = flaggedData;
-    lossLineChart.update();
-  }
-
-  function resetAll(){
-    fields.forEach(f=> setVal(f,''));
-    updateChart([null,null,null,null,null],[null,null,null,null,null],['future','future','future','future','future']);
-    setBadges();
-    $('inputHint').textContent='Pick a cycle, then add actuals to lock stages.';
-    $('flagsPanel').classList.add('hidden');
-    const badge = $('flagBadge'); if (badge) badge.classList.add('hidden');
-  }
-
-  // ------------------- Pyodide + Model (unchanged) -------------------
-  let pyodide, modelLoaded = false;
-  const MODEL_PATH = '/tmp/ml_model.joblib';
-  const MODEL_URL  = 'ml_model.joblib';
-
-  async function initPy(){
-    $('statusText').textContent = 'Loading Python…';
-    try{
-      pyodide = await loadPyodide();
-      try { await pyodide.loadPackage(['numpy','pandas','scikit-learn','joblib']); }
-      catch(e){ console.warn('Package load warning:', e); logDebug(e.toString()); }
-      const pyCode = `
-import math, json, numpy as np, pandas as pd, joblib
+/* =================== Pyodide / Model =================== */
+let pyodide, modelLoaded=false;
+async function initPy(){
+  $('statusText').textContent='Loading Python…';
+  try{
+    pyodide=await loadPyodide();
+    try{ await pyodide.loadPackage(['numpy','pandas','scikit-learn','joblib']); }catch(e){ logDebug(e.toString()); }
+    const pyCode=`
+import math, numpy as np, pandas as pd, joblib
 bundle=None
 press_model=glaze_model=kiln_model=None
 stage_features={}
@@ -531,6 +510,7 @@ THRESH_MARGIN=0.03
 SORT_MIN=0.90
 SORT_DEFAULT=0.90
 SORT_MAX=0.92
+
 def load_model(path):
     global bundle, press_model, glaze_model, kiln_model, THRESH_MARGIN, SORT_MIN, SORT_DEFAULT, SORT_MAX, stage_features, recipe_setpoints
     bundle = joblib.load(path)
@@ -556,193 +536,304 @@ def load_model(path):
         }
         recipe_setpoints = {}
     return True
+
 def _sp_for(rid):
-    try:
-        return recipe_setpoints.get(int(rid), {})
-    except Exception:
-        return {}
+    try: return recipe_setpoints.get(int(rid), {})
+    except: return {}
+
 def _feature_row(feats, d, suppl=None):
-    row={}
-    src = dict(d)
+    row={}; src=dict(d)
     if suppl: src.update(suppl)
-    sp = _sp_for(src.get("recipe_id"))
+    sp=_sp_for(src.get("recipe_id"))
     for f in feats:
-        if f in src and src[f] is not None and not (isinstance(src[f], float) and math.isnan(src[f])):
-            row[f] = src[f]; continue
-        if f.startswith("k_set_"):
-            row[f] = sp.get(f, math.nan); continue
+        if f in src and src[f] is not None and not (isinstance(src[f], float) and math.isnan(src[f])): row[f]=src[f]; continue
+        if f.startswith("k_set_"): row[f]=sp.get(f, math.nan); continue
         if f.startswith("delta_"):
-            base = f.replace("delta_","")
-            set_key = "k_set_"+base if not base.startswith("k_set_") else base
-            m = src.get(base, math.nan)
-            s = sp.get(set_key, math.nan)
-            try:
-                row[f] = float(m) - float(s)
-            except Exception:
-                row[f] = math.nan
+            base=f.replace("delta_",""); set_key="k_set_"+base if not base.startswith("k_set_") else base
+            m=src.get(base, math.nan); s=sp.get(set_key, math.nan)
+            try: row[f]=float(m)-float(s)
+            except: row[f]=math.nan
             continue
-        row[f] = math.nan
+        row[f]=math.nan
     return row
+
 def _df_for(stage_key, d, suppl=None):
-    feats = stage_features.get(stage_key, [])
+    feats=stage_features.get(stage_key, [])
     return pd.DataFrame([_feature_row(feats, d, suppl)])
+
 def _round0(x):
     try: return int(round(float(x)))
     except: return None
+
 def predict(payload):
-    d = payload
-    res = {
-      "stages": {
+    d=payload
+    res={"stages":{
         "start":{"status":"blocked","amount":None,"min_required":None,"ratio":1.0},
         "press":{"status":"blocked","amount":None,"min_required":None,"ratio":None},
         "glaze":{"status":"blocked","amount":None,"min_required":None,"ratio":None},
         "kiln" :{"status":"blocked","amount":None,"min_required":None,"ratio":None},
         "sort" :{"status":"blocked","amount":None,"min_required":None,"ratio":SORT_DEFAULT}
-      }
-    }
-    if d.get("vol_start") is None or (isinstance(d.get("vol_start"), float) and math.isnan(d.get("vol_start"))):
-        return res
-    start = float(d["vol_start"])
-    res["stages"]["start"].update(status="actual", amount=_round0(start))
+    }}
+    if d.get("vol_start") is None or (isinstance(d.get("vol_start"), float) and math.isnan(d.get("vol_start"))): return res
+    start=float(d["vol_start"]); res["stages"]["start"].update(status="actual", amount=_round0(start))
+
     # PRESS
-    press_actual = d.get("vol_press_out")
+    press_actual=d.get("vol_press_out")
     if press_actual is not None and not (isinstance(press_actual,float) and math.isnan(press_actual)):
-        press_amt = min(float(press_actual), start)
+        press_amt=min(float(press_actual), start)
         res["stages"]["press"].update(status="actual", amount=_round0(press_amt))
-        press_base = press_amt
+        press_base=press_amt
     else:
-        df_press = _df_for("press_ratio", d)
-        pr = float(press_model.predict(df_press)[0])
-        press_amt = min(start * pr, start)
-        min_req = start * max(0.0, pr - THRESH_MARGIN)
+        df=_df_for("press_ratio", d); pr=float(press_model.predict(df)[0])
+        press_amt=min(start*pr, start); min_req=start*max(0.0, pr-THRESH_MARGIN)
         res["stages"]["press"].update(status="pred", amount=_round0(press_amt), min_required=_round0(min_req), ratio=pr)
-        press_base = press_amt
+        press_base=press_amt
+
     # GLAZE
-    glaze_actual = d.get("vol_glaze_out")
+    glaze_actual=d.get("vol_glaze_out")
     if glaze_actual is not None and not (isinstance(glaze_actual,float) and math.isnan(glaze_actual)):
-        glaze_amt = min(float(glaze_actual), press_base)
+        glaze_amt=min(float(glaze_actual), press_base)
         res["stages"]["glaze"].update(status="actual", amount=_round0(glaze_amt))
-        glaze_base = glaze_amt
+        glaze_base=glaze_amt
     else:
-        df_glaze = _df_for("glaze_ratio", d, {"vol_press_out": press_base})
-        gr = float(glaze_model.predict(df_glaze)[0])
-        glaze_amt = min(press_base * gr, press_base)
-        min_req = press_base * max(0.0, gr - THRESH_MARGIN)
+        df=_df_for("glaze_ratio", d, {"vol_press_out": press_base}); gr=float(glaze_model.predict(df)[0])
+        glaze_amt=min(press_base*gr, press_base); min_req=press_base*max(0.0, gr-THRESH_MARGIN)
         res["stages"]["glaze"].update(status="pred", amount=_round0(glaze_amt), min_required=_round0(min_req), ratio=gr)
-        glaze_base = glaze_amt
+        glaze_base=glaze_amt
+
     # KILN
-    kiln_actual = d.get("vol_kiln_out")
+    kiln_actual=d.get("vol_kiln_out")
     if kiln_actual is not None and not (isinstance(kiln_actual,float) and math.isnan(kiln_actual)):
-        kiln_amt = min(float(kiln_actual), glaze_base)
+        kiln_amt=min(float(kiln_actual), glaze_base)
         res["stages"]["kiln"].update(status="actual", amount=_round0(kiln_amt))
-        kiln_base = kiln_amt
+        kiln_base=kiln_amt
     else:
-        df_kiln = _df_for("kiln_ratio", d, {"vol_glaze_out": glaze_base})
-        kr = float(kiln_model.predict(df_kiln)[0])
-        kiln_amt = min(glaze_base * kr, glaze_base)
-        min_req = glaze_base * max(0.0, kr - THRESH_MARGIN)
+        df=_df_for("kiln_ratio", d, {"vol_glaze_out": glaze_base}); kr=float(kiln_model.predict(df)[0])
+        kiln_amt=min(glaze_base*kr, glaze_base); min_req=glaze_base*max(0.0, kr-THRESH_MARGIN)
         res["stages"]["kiln"].update(status="pred", amount=_round0(kiln_amt), min_required=_round0(min_req), ratio=kr)
-        kiln_base = kiln_amt
-    # SORT
-    sr = float(SORT_DEFAULT)
-    sort_amt = min(kiln_base * sr, kiln_base)
-    min_req = kiln_base * max(SORT_MIN, sr - 0.02)
+        kiln_base=kiln_amt
+
+    # SORT (kept for path prediction; Pass/Fail handled in JS at 90% kiln actual)
+    sr=float(SORT_DEFAULT); sort_amt=min(kiln_base*sr, kiln_base); min_req=kiln_base*max(SORT_MIN, sr-0.02)
     res["stages"]["sort"].update(status="pred", amount=_round0(sort_amt), min_required=_round0(min_req), ratio=sr)
     return res
-      `;
-      await pyodide.runPythonAsync(pyCode);
-      $('statusText').textContent = 'Python ready. Loading model…';
-      await autoLoadModel();
-    }catch(e){
-      $('statusText').textContent = 'Python failed to load.';
-      logDebug(e.toString());
+`;
+    await pyodide.runPythonAsync(pyCode);
+
+    // load model
+    $('statusText').textContent='Loading model…';
+    const resp=await fetch(MODEL_URL,{cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP '+resp.status+' fetching '+MODEL_URL);
+    const buf=await resp.arrayBuffer();
+    try{ pyodide.FS.mkdir('/tmp',{mode:0o777}); }catch(e){}
+    try{ pyodide.FS.unlink(MODEL_PATH); }catch(e){}
+    pyodide.FS.writeFile(MODEL_PATH,new Uint8Array(buf));
+    await pyodide.runPythonAsync(`load_model("${MODEL_PATH}")`);
+    modelLoaded=true; $('statusText').textContent='Model loaded';
+
+    // Enable the run button now that we're ready
+    const runBtn = $('btnExample');
+    if (runBtn) { runBtn.disabled = false; runBtn.textContent = 'Call Next Cycle'; }
+  }catch(e){
+    $('statusText').textContent='Python/model failed.';
+    logDebug(e.toString());
+    const runBtn = $('btnExample');
+    if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Model unavailable'; }
+  }
+}
+
+async function predictNow(){
+  if(!modelLoaded) return null;
+  const payload=getPayloadFromUI();
+  try{
+    const fn=pyodide.globals.get('predict');
+    const pyIn=pyodide.toPy(payload);
+    const pyOut=fn(pyIn);
+    const res=pyOut.toJs({dict_converter:Object.fromEntries});
+    pyIn.destroy(); pyOut.destroy(); fn.destroy();
+    const d=res.stages;
+    lastVols=[d.start.amount, d.press.amount, d.glaze.amount, d.kiln.amount, d.sort.amount];
+    lastMins=[d.start.min_required, d.press.min_required, d.glaze.min_required, d.kiln.min_required, d.sort.min_required];
+    refreshChart();
+    setBadges();
+    return {vols:lastVols.slice(), mins:lastMins.slice()};
+  }catch(e){ $('statusText').textContent='Prediction failed'; logDebug(e.toString()); return null; }
+}
+
+/* =================== Stage filling (CSV actuals) =================== */
+function fillStartFromRow(row){
+  setVal('datetime', toDatetimeLocal(row.datetime));
+  setVal('recipe_id', row.recipe_id);
+  setVal('gloss_type', row.gloss_type);
+  setVal('gloss_amount_target_g_per_tile', row.gloss_amount_target_g_per_tile);
+  setVal('vol_start', row.vol_start);
+}
+function fillPressFromRow(row){
+  setVal('vol_press_out', row.vol_press_out);
+  setVal('target_pressure', row.target_pressure ?? row.target_pressure_psi ?? '');
+  setVal('actual_pressure', row.actual_pressure ?? row.actual_pressure_psi ?? '');
+  setVal('layers_tossed', row.layers_tossed ?? 24);
+  setVal('desired_thickness', row.desired_thickness ?? row.desired_thickness_mm ?? '');
+}
+function fillGlazeFromRow(row){
+  setVal('vol_glaze_out', row.vol_glaze_out);
+  setVal('recipe_air_cooling', row.recipe_air_cooling ?? 1);
+  setVal('recipe_moisture', row.recipe_moisture ?? 0.5);
+  setVal('recipe_air_flow', row.recipe_air_flow ?? 3);
+  setVal('recipe_max_temp', row.recipe_max_temp ?? 1205);
+  setVal('recipe_humidity', row.recipe_humidity ?? 40);
+}
+function fillKilnFromRow(row){
+  setVal('vol_kiln_out', row.vol_kiln_out);
+  setVal('kiln_air_cooling', row.kiln_air_cooling ?? 1);
+  setVal('kiln_moisture', row.kiln_moisture ?? 0.5);
+  setVal('kiln_air_flow', row.kiln_air_flow ?? 3);
+  setVal('kiln_max_temp', row.kiln_max_temp ?? 1205);
+  setVal('kiln_humidity', row.kiln_humidity ?? 42);
+  setVal('delta_air_cooling', row.delta_air_cooling ?? 0);
+  setVal('delta_moisture', row.delta_moisture ?? 0);
+  setVal('delta_air_flow', row.delta_air_flow ?? 0);
+  setVal('delta_max_temp', row.delta_max_temp ?? 0);
+  setVal('delta_humidity', row.delta_humidity ?? 0);
+}
+function fillSortFromRow(row){ /* row.vol_sort_out is used for evaluation; no input field needed */ }
+
+function resetUI(){
+  fields.forEach(f=>setVal(f,''));
+  lastVols=[null,null,null,null,null];
+  lastMins=[null,null,null,null,null];
+  PINNED_MINS=[null,null,null,null,null];
+  failFlags=[false,false,false,false,false];
+  stageOutcome=['—','—','—','—','—'];
+  revealed=[false,false,false,false,false];
+  currentRow=null;
+  refreshChart(); setBadges(); resetFlagsPanel();
+}
+
+/* =================== Evaluation =================== */
+function evaluateStage(idx, actualVal, pinnedMin){
+  // Always resolve to Passed/Failed (no "Incomplete" after the run)
+  if(actualVal==null || pinnedMin==null){
+    stageOutcome[idx]='Failed';
+    failFlags[idx]=true;
+    addFlag(STAGES[idx], 'Failed amount');
+    PINNED_MINS[idx]=pinnedMin ?? null;
+    return;
+  }
+  if(actualVal < pinnedMin){
+    stageOutcome[idx]='Failed'; failFlags[idx]=true;
+    addFlag(STAGES[idx], `Actual ${fmt(actualVal)} < threshold ${fmt(pinnedMin)}`);
+  }else{
+    stageOutcome[idx]='Passed';
+  }
+  PINNED_MINS[idx]=pinnedMin;
+}
+
+/* =================== Run loop (auto every 10s) =================== */
+let simRunning=false, cachedRows=null;
+
+async function runOneRowProgressively(row){
+  if(!modelLoaded) { $('statusText').textContent='Model not loaded'; return; }
+
+  // disable button during run
+  const runBtn = $('btnExample');
+  if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Running…'; }
+
+  simRunning=true; resetUI(); currentRow=row;
+
+  // Normalize numerics on the row
+  ['gloss_amount_target_g_per_tile','target_pressure','actual_pressure','layers_tossed','desired_thickness',
+   'recipe_air_cooling','recipe_moisture','recipe_air_flow','recipe_max_temp','recipe_humidity',
+   'kiln_air_cooling','kiln_moisture','kiln_air_flow','kiln_max_temp','kiln_humidity',
+   'delta_air_cooling','delta_moisture','delta_air_flow','delta_max_temp','delta_humidity',
+   'vol_start','vol_press_out','vol_glaze_out','vol_kiln_out','vol_sort_out'
+  ].forEach(k=>{ if(row[k]!=null && row[k]!=='') row[k]=coerceNumber(row[k]); });
+
+  // START: reveal immediately
+  revealed[0]=true;
+  fillStartFromRow(row);
+  stageOutcome[0]='Passed';
+  setBadges();
+  await predictNow(); // compute mins for press..sort
+  refreshChart();
+
+  // PRESS after 10s
+  await sleep(TEN_SECONDS); if(!simRunning) return;
+  const pinPress = lastMins[1];
+  revealed[1]=true; fillPressFromRow(row);
+  await predictNow(); evaluateStage(1, coerceNumber(row.vol_press_out), pinPress);
+  refreshChart(); setBadges();
+
+  // GLAZE after 10s
+  await sleep(TEN_SECONDS); if(!simRunning) return;
+  const pinGlaze = lastMins[2];
+  revealed[2]=true; fillGlazeFromRow(row);
+  await predictNow(); evaluateStage(2, coerceNumber(row.vol_glaze_out), pinGlaze);
+  refreshChart(); setBadges();
+
+  // KILN after 10s
+  await sleep(TEN_SECONDS); if(!simRunning) return;
+  const pinKiln = lastMins[3];
+  revealed[3]=true; fillKilnFromRow(row);
+  await predictNow(); evaluateStage(3, coerceNumber(row.vol_kiln_out), pinKiln);
+  refreshChart(); setBadges();
+
+  // SORT after 10s — PASS RULE: Sort ≥ 90% of Kiln ACTUAL (no ML)
+  await sleep(TEN_SECONDS); if(!simRunning) return;
+  revealed[4]=true; fillSortFromRow(row);
+  const kilnActual = coerceNumber(row.vol_kiln_out) ?? lastVols[3];
+  const sortThreshold = (kilnActual!=null) ? Math.floor(kilnActual * 0.90) : null;
+  PINNED_MINS[4] = sortThreshold; // rule-based threshold
+  await predictNow();
+  evaluateStage(4, coerceNumber(row.vol_sort_out), sortThreshold);
+  refreshChart(); setBadges();
+
+  // Ensure no "—" remains
+  stageOutcome = stageOutcome.map((s,i)=> s==='—' ? (failFlags[i]?'Failed':'Passed') : s);
+  setBadges();
+
+  $('statusText').textContent='Run complete.';
+  simRunning=false;
+
+  // re-enable button if model still loaded
+  if (runBtn && modelLoaded) { runBtn.disabled = false; runBtn.textContent = 'Call Next Cycle'; }
+}
+
+/* =================== Wiring =================== */
+async function onGenerate(){
+  if(simRunning){ simRunning=false; } // stop any current run
+  try{
+    // Disable immediately to avoid double clicks
+    const runBtn = $('btnExample');
+    if (runBtn) { runBtn.disabled = true; runBtn.textContent = 'Preparing…'; }
+
+    if(!cachedRows){
+      $('statusText').textContent='Loading CSV…';
+      cachedRows = await loadCSVRows();
+      $('statusText').textContent=`Loaded ${cachedRows.length} rows.`;
     }
+    const row = cachedRows[Math.floor(Math.random()*cachedRows.length)];
+    $('statusText').textContent = `Running: ${row.endpoint || '(random row)'}`;
+    await runOneRowProgressively(row); // await so we can re-enable properly
+  }catch(e){
+    $('statusText').textContent='Failed to load/use endpoints.csv';
+    logDebug(e.toString());
+    const runBtn = $('btnExample');
+    if (runBtn && modelLoaded) { runBtn.disabled = false; runBtn.textContent = 'Call Next Cycle'; }
   }
+}
 
-  async function autoLoadModel(){
-    try{
-      const resp = await fetch(MODEL_URL, { cache: 'no-store' });
-      if(!resp.ok) throw new Error('HTTP '+resp.status+' fetching '+MODEL_URL);
-      const buf = await resp.arrayBuffer();
-      try { pyodide.FS.mkdir('/tmp',{mode:0o777}); } catch(e){}
-      try { pyodide.FS.unlink(MODEL_PATH); } catch(e){}
-      pyodide.FS.writeFile(MODEL_PATH, new Uint8Array(buf));
-      await pyodide.runPythonAsync(`load_model("${MODEL_PATH}")`);
-      modelLoaded = true;
-      $('statusText').textContent = 'Model loaded ✅ (ml_model.joblib)';
-      logDebug('Model loaded from '+MODEL_URL);
-    }catch(e){
-      modelLoaded = false;
-      $('statusText').textContent = 'Could not load ml_model.joblib. Place it next to this HTML and open via http(s).';
-      logDebug(e.toString());
-    }
-  }
+function initUI(){
+  const btn=$('btnExample'); if(btn) btn.addEventListener('click', onGenerate);
+  const lt=$('layers_tossed'); if(lt){ lt.value=24; lt.readOnly=true; lt.title='Fixed at 24 tiles'; }
+}
 
-  async function predictNow(){
-    if(!modelLoaded){ $('statusText').textContent = 'Model not loaded.'; return; }
-    // collect payload from inputs (already DB-filled by loss_predictions.js)
-    const payload = {};
-    fields.forEach(k => {
-      const el = $(k);
-      if (!el) { payload[k] = null; return; }
-      const val = el.value;
-      if (val === '') { payload[k] = null; return; }
-      const numericIds = new Set([
-        'gloss_amount_target_g_per_tile','vol_start','vol_press_out','vol_glaze_out','vol_kiln_out','vol_sort_out',
-        'target_pressure','actual_pressure','layers_tossed','desired_thickness',
-        'recipe_air_cooling','recipe_moisture','recipe_air_flow','recipe_max_temp','recipe_humidity',
-        'kiln_air_cooling','kiln_moisture','kiln_air_flow','kiln_max_temp','kiln_humidity',
-        'delta_air_cooling','delta_moisture','delta_air_flow','delta_max_temp','delta_humidity'
-      ]);
-      if (el.type === 'number' || numericIds.has(k)) {
-        const n = Number(val);
-        payload[k] = isNaN(n) ? null : n;
-      } else {
-        payload[k] = val;
-      }
-    });
-
-    let resObj;
-    try{
-      const pyPredict = pyodide.globals.get('predict');
-      const pyPayload = pyodide.toPy(payload);
-      const pyOut = pyPredict(pyPayload);
-      resObj = pyOut.toJs({ dict_converter: Object.fromEntries });
-      pyPayload.destroy(); pyOut.destroy(); pyPredict.destroy();
-    }catch(e){
-      $('statusText').textContent='Prediction failed. Check inputs.';
-      logDebug('Predict error: '+e.toString());
-      return;
-    }
-
-    const d = resObj.stages;
-    const vols = [d.start.amount, d.press.amount, d.glaze.amount, d.kiln.amount, d.sort.amount];
-    const mins = [d.start.min_required, d.press.min_required, d.glaze.min_required, d.kiln.min_required, d.sort.min_required];
-    const statuses = ['start','press','glaze','kiln','sort'].map(k=>{
-      const s = d[k].status; return s==='blocked'?'future':(s==='actual'?'actual':'pred');
-    });
-
-    setBadges([statuses[0],statuses[1],statuses[2],statuses[3]]);
-    updateChart(vols, mins, statuses);
-
-    const flags = evaluateFlags(payload, vols, mins);
-    renderFlags(flags);
-
-    $('statusText').textContent = 'Done.';
-  }
-
-  function resetBoot(){
-    resetAll();
-    initPy();
-  }
-
-  // Recompute when a run is selected from the dropdown
-  window.addEventListener('cycleSelected', () => {
-    // fields already filled by loss_predictions.js → just predict + flag
-    predictNow();
-  });
-
-  resetBoot();
+/* =================== Boot =================== */
+(async function boot(){
+  initUI();
+  await initPy(); // will enable the button when ready
+  $('inputHint')?.textContent && ( $('inputHint').textContent = ' ' );
+})()
 </script>
 </body>
 </html>
