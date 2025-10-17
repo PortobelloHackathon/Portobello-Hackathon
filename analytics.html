@@ -440,7 +440,20 @@ donut._ringVals = [0, 0, 0, 0, 0];
         recipeFilter.innerHTML = '<option value="__all__">All</option>' + uniqueRecipes.map(r => `<option value="${r}">${r}</option>`).join('');
 
         // Modal select options (all times initially)
-        selectEl.innerHTML = ALL_TIMES.map(t => `<option value="${t}">${t}</option>`).join('');
+        selectEl.innerHTML = ALL_TIMES.map(t => {
+          const d = new Date(t.includes('Z') || t.includes('T') ? t : t.replace(' ', 'T'));
+          const label = isNaN(d)
+            ? t
+            : d.toLocaleString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+              }).replace(',', ', ');
+          return `<option value="${t}">${label}</option>`;
+        }).join('');
 
         dashLoading.textContent = 'ready';
         applyRecipeFilter(); // sets FILTERED_TIMES + kicks update
@@ -581,7 +594,20 @@ donut._ringVals = [0, 0, 0, 0, 0];
       scrub.value = currentIndex;
 
       // Modal list also respects current filter
-      selectEl.innerHTML = FILTERED_TIMES.map(t => `<option value="${t}">${t}</option>`).join('');
+      selectEl.innerHTML = FILTERED_TIMES.map(t => {
+        const parsed = new Date(t.includes('T') ? t : t.replace(' ', 'T'));
+        const formatted = isNaN(parsed)
+          ? t
+          : parsed.toLocaleString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true,
+            });
+        return `<option value="${t}">${formatted}</option>`;
+      }).join('');
 
       updateAllByIndex(currentIndex);
     }

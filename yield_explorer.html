@@ -295,7 +295,21 @@ function renderAll(){
   // Table
   $('tblBody').innerHTML = CACHE.tableRows.map(r=>`
     <tr class="border-t">
-      <td class="px-3 py-2">${r.datetime}</td>
+<td class="px-3 py-2">${
+  (() => {
+    const d = new Date(r.datetime?.includes('T') ? r.datetime : r.datetime?.replace(' ', 'T'));
+    return !isNaN(d)
+      ? d.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
+      : r.datetime || '—';
+  })()
+}</td>
       <td class="px-3 py-2 text-right">${r.recipe}</td>
       <td class="px-3 py-2 text-right">${fmtN(r.s)}</td>
       <td class="px-3 py-2 text-right">${fmtN(r.p)}</td>

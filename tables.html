@@ -513,7 +513,21 @@ const COLS = [
         const v = r[col.key];
         const cls = (typeof v === 'number') ? 'text-right' : 'text-left';
         const muted = (v == null || v === '' || Number.isNaN(v)) ? 'text-slate-400' : '';
-        return `<td class="px-3 py-2 border-t ${cls} ${muted}">${fmt(v)}</td>`;
+        let displayVal = v;
+        if (col.key === 'datetime' && v) {
+          const d = new Date(v.includes('T') ? v : v.replace(' ', 'T'));
+          if (!isNaN(d)) {
+            displayVal = d.toLocaleString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true,
+            });
+          }
+        }
+        return `<td class="px-3 py-2 border-t ${cls} ${muted}">${fmt(displayVal)}</td>`;
       }).join('');
 
       tbody.innerHTML = rows.map(r => {
