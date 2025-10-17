@@ -27,6 +27,9 @@
       }
     }
   </script>
+  <!-- Timestamp modal will be injected into body to ensure elements exist -->
+
+  
 </head>
 
 <body class="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
@@ -63,7 +66,10 @@
           <section class="col-span-12 lg:col-span-8 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[22rem]">
             <div class="flex items-center justify-between mb-2">
               <h3 class="text-lg font-semibold text-slate-800">Material Loss Per Stage</h3>
-              <span class="text-sm text-slate-500">kg</span>
+              <div class="flex items-center gap-3">
+                <span class="text-sm text-slate-500">kg</span>
+                <button id="chooseAnalyticsTs" class="px-2 py-1 bg-slate-100 rounded border text-sm">Choose timestamp</button>
+              </div>
             </div>
             <canvas id="lossLineChart" class="w-full h-full"></canvas>
           </section>
@@ -133,8 +139,20 @@
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Timestamp modal -->
+  <div id="analyticsModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40">
+    <div class="bg-white rounded p-4 w-96">
+      <h3 class="font-semibold mb-2">Select timestamp for analytics</h3>
+      <select id="analyticsSelect" class="w-full border p-2 mb-3"></select>
+      <div class="flex justify-end gap-2">
+        <button id="analyticsCancel" class="px-3 py-1 rounded border">Cancel</button>
+        <button id="analyticsView" class="px-3 py-1 bg-slate-700 text-white rounded">View</button>
+      </div>
+    </div>
+  </div>
 
   <script>
+    document.addEventListener('DOMContentLoaded', () => {
     // ---- Brand + status colors ----
     const PB_BLUE     = '#0B1F52';
     const PB_GRAY_D   = '#434A52';
@@ -173,7 +191,7 @@
       data: {
         labels: STAGE_LABELS,  // <-- fixed to stages
         datasets: [{
-          label: 'Loss (kg)',
+          label: 'Value (kg)',
           data: [],
           segment: { borderColor: (ctx) => colorFor(ctx.p0DataIndex) },
           backgroundColor: PB_GRAY_L + '55', // subtle constant fill
@@ -269,12 +287,58 @@
       kpiOnTime.data.datasets[0].data = [data.kpis.onTimePct, 100 - data.kpis.onTimePct]; kpiOnTime.update();
     }
 
-    // ---- Demo (5 stages) ----
-    updateDashboard({
-      lossKg:   [12, 15, 13, 18, 14],                       // Start→Press→Glaze→Kiln→Sort
-      statuses: ['past','past','current','future','future'],
-      kpis:     { yieldPct: 86, scrapPct: 14, onTimePct: 92 }
+    // charts start empty until user selects a timestamp
+    // (no demo data loaded by default)
+
+    // --- CSV parsing + modal wiring ---
+    function parseCSV(text){
+      const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').filter(l=>l.trim()!=='');
+      if(lines.length===0) return {columns:[],rows:[]};
+      const parseLine = (line)=>{const res=[];let cur='';let inQ=false;for(let i=0;i<line.length;i++){const ch=line[i]; if(ch==='"'){ if(inQ && line[i+1]==='"'){ cur+='"'; i++; } else inQ=!inQ; continue;} if(ch===',' && !inQ){ res.push(cur); cur=''; continue; } cur+=ch;} res.push(cur); return res; };
+      const headers = parseLine(lines[0]).map(h=>h.trim());
+      const rows = lines.slice(1).map(l=>{const parts=parseLine(l); const obj={}; for(let i=0;i<headers.length;i++) obj[headers[i]] = parts[i]!==undefined?parts[i].trim():''; return obj; });
+      return {columns: headers, rows};
+    }
+
+    const chooseBtn = document.getElementById('chooseAnalyticsTs');
+    const modalEl = document.getElementById('analyticsModal');
+    const selectEl = document.getElementById('analyticsSelect');
+    const cancelBtn = document.getElementById('analyticsCancel');
+    const viewBtn = document.getElementById('analyticsView');
+
+    let analyticsData = null;
+    fetch('tiles6.csv').then(r=>r.text()).then(txt=>{
+      try{
+        analyticsData = parseCSV(txt);
+        if(analyticsData.columns.includes('datetime')){
+          // dedupe timestamps preserving order
+          const seen = new Set();
+          analyticsData.rows.forEach(r=>{ if(!seen.has(r.datetime)){ seen.add(r.datetime); const o = document.createElement('option'); o.value=r.datetime; o.textContent=r.datetime; selectEl.appendChild(o); } });
+        }
+      }catch(e){ console.warn('CSV parse failed',e); }
+    }).catch(e=>console.warn('fetch failed',e));
+
+    chooseBtn.addEventListener('click', ()=>{ modalEl.classList.remove('hidden'); modalEl.classList.add('flex'); });
+    cancelBtn.addEventListener('click', ()=>{ modalEl.classList.add('hidden'); modalEl.classList.remove('flex'); });
+    viewBtn.addEventListener('click', ()=>{
+      const ts = selectEl.value; if(!analyticsData) return; const rows = analyticsData.rows.filter(r=>r.datetime===ts);
+      if(rows.length===0) return;
+      const aliasGroups = [
+        ['vol_start'],
+        ['vol_press','vol_press_out'],
+        ['vol_glaze','vol_glaze_out'],
+        ['vol_kiln_out'],
+        ['vol_sort_out']
+      ];
+      const cols = aliasGroups.map(group => group.find(g => analyticsData.columns.includes(g))).filter(Boolean);
+      const values = cols.map(c => Number(rows[0][c] || 0));
+      while(values.length<5) values.push(0);
+      const statuses = ['past','past','current','future','future'];
+      updateDashboard({ lossKg: values.slice(0,5), statuses, kpis: { yieldPct: 86, scrapPct: 14, onTimePct: 92 } });
+      modalEl.classList.add('hidden'); modalEl.classList.remove('flex');
     });
+
+    }); // end DOMContentLoaded
   </script>
 </body>
 </html>
