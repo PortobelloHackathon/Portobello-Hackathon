@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Portobello Dashboard — Predictive (Client-only, auto-load ml_model.joblib)</title>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
+          colors: {
+            pbBlue: '#0B1F52',
+            pbSlate: '#6B7280',
+            pbGrayLight: '#CFD3DA',
+            pbGrayMid:   '#7C8390',
+            pbGrayDark:  '#434A52',
+            stageActual: '#16A34A',  // green
+            stagePred:   '#F4B000',  // yellow
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Pyodide (Python in the browser) -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+</head>
+
+<body class="h-screen flex flex-col bg-slate-50 text-slate-800 font-sans">
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
+    <div class="relative w-full py-5 pl-3 flex items-center">
+      <!-- Left: Logo with tiny left padding -->
+      <a href="/" class="shrink-0">
+        <img
+          src="assets/images/logo_portobello_america_CORES_pantone_655.png"
+          alt="Portobello America"
+          class="h-16 w-auto object-contain block"
+        />
+      </a>
+
+      <!-- Center: Title (stays perfectly centered regardless of logo width) -->
+      <h1
+        class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none"
+      >
+        Tile Material Dashboard
+      </h1>
+
+      <!-- Right: Spacer for symmetry / future actions -->
+      <div class="ml-auto"></div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <script src="sidebar.js" defer></script>
+
+    <!-- MAIN -->
+    <main class="flex-1 overflow-auto">
+      <div class="mx-auto max-w-7xl px-8 py-8">
+        <!-- ======== PANEL: PREDICTIONS (active) ======== -->
+        <section id="panel-predictions">
+          <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Predictions</h2>
+
+          <!-- TOP STATUS -->
+          <section class="mt-5 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+            <div class="flex flex-wrap items-start gap-3 justify-between">
+              <div>
+                <h3 class="text-lg font-semibold text-slate-800">Model & Inputs</h3>
+                <p id="statusText" class="text-sm text-slate-500 mt-1">Booting Python…</p>
+                <details class="mt-2 text-xs text-slate-500">
+                  <summary class="cursor-pointer select-none">Debug</summary>
+                  <pre id="debugLog" class="mt-2 bg-slate-50 border rounded p-2 whitespace-pre-wrap"></pre>
+                </details>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btnExample"   class="px-3 py-1.5 rounded border">Example</button>
+                <button id="btnReset"     class="px-3 py-1.5 rounded border">Reset</button>
+                <button id="btnPredict"   class="px-3 py-1.5 rounded bg-pbBlue text-white font-semibold">Predict</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Inputs by Stage -->
+          <section class="mt-4 rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+            <div class="flex flex-wrap items-start gap-3 justify-between">
+              <div>
+                <h3 class="text-lg font-semibold text-slate-800">Inputs by Stage</h3>
+                <p id="inputHint" class="text-sm text-slate-500 mt-1">Enter Start (required). Add actuals to lock a stage (green), or provide inputs to unlock predictions (yellow).</p>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Actual</span>
+                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#F4B000"></span> Predicted</span>
+                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
+              </div>
+            </div>
+
+            <!-- Grid of inputs -->
+            <div class="mt-4 grid grid-cols-12 gap-4">
+              <!-- START -->
+              <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="font-semibold">Start</h4>
+                  <span id="badgeStart" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
+                </div>
+
+                <label class="block text-sm mb-1">Recipe ID</label>
+                <select id="recipe_id" class="w-full border rounded p-2 mb-2 bg-white">
+                  <option value="">Choose…</option>
+                  <option value="241">241</option>
+                  <option value="244">244</option>
+                  <option value="245">245</option>
+                  <option value="246">246</option>
+                  <option value="247">247</option>
+                </select>
+
+                <label class="block text-sm mb-1">Start Volume</label>
+                <input id="vol_start" type="number" class="w-full border rounded p-2" placeholder="required" />
+              </div>
+
+              <!-- PRESS -->
+              <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="font-semibold">Press</h4>
+                  <span id="badgePress" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
+                </div>
+                <label class="block text-sm mb-1">Press Pressure (psi)</label>
+                <input id="pressure_psi" type="number" class="w-full border rounded p-2 mb-2" placeholder="model input" />
+                <label class="block text-sm mb-1">Press Output (actual, optional)</label>
+                <input id="vol_press_out" type="number" class="w-full border rounded p-2" placeholder="if known, overrides model" />
+              </div>
+
+              <!-- GLAZE -->
+              <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="font-semibold">Glaze</h4>
+                  <span id="badgeGlaze" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
+                </div>
+                <label class="block text-sm mb-1">Glaze Pressure (psi)</label>
+                <input id="glaze_pressure_psi" type="number" class="w-full border rounded p-2 mb-2" placeholder="model input (or leave blank)" />
+                <label class="block text-sm mb-1">Glaze Output (actual, optional)</label>
+                <input id="vol_glaze_out" type="number" class="w-full border rounded p-2" placeholder="if known, overrides model" />
+              </div>
+
+              <!-- KILN -->
+              <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="font-semibold">Kiln</h4>
+                  <span id="badgeKiln" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-xs mb-1">Max Temp</label>
+                    <input id="max_temp" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Cooling</label>
+                    <input id="cooling_profile" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Moisture %</label>
+                    <input id="moisture_pct" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Humidity %</label>
+                    <input id="external_humidity" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Air Flow</label>
+                    <input id="air_flow_top_setting" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Air Cooling</label>
+                    <input id="air_cooling" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Thickness (mm)</label>
+                    <input id="thickness_mm" type="number" class="w-full border rounded p-2" />
+                  </div>
+                  <div>
+                    <label class="block text-xs mb-1">Kiln Output (actual, optional)</label>
+                    <input id="vol_kiln_out" type="number" class="w-full border rounded p-2" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- CHART -->
+          <div class="mt-6 grid grid-cols-12 gap-4">
+            <section class="col-span-12 rounded-2xl border border-slate-200 bg-white shadow-sm p-4 h-[24rem]">
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="text-lg font-semibold text-slate-800">Material Loss Per Stage</h3>
+                <div class="flex items-center gap-3 text-xs text-slate-500">
+                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Actual</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#F4B000"></span> Predicted</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
+                </div>
+              </div>
+              <canvas id="lossLineChart" class="w-full h-full"></canvas>
+            </section>
+          </div>
+        </section>
+
+        <!-- ======== PANEL: ANALYTICS (placeholder) ======== -->
+        <section id="panel-analytics" class="hidden">
+          <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Analytics</h2>
+          <section class="mt-5 rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
+            <p class="text-slate-600">Analytics content goes here.</p>
+          </section>
+        </section>
+
+        <!-- ======== PANEL: DATA (placeholder) ======== -->
+        <section id="panel-data" class="hidden">
+          <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Data</h2>
+          <section class="mt-5 rounded-2xl border border-slate-200 bg-white shadow-sm p-6">
+            <p class="text-slate-600">Data tools go here.</p>
+          </section>
+        </section>
+      </div>
+    </main>
+  </div>
+
+<script>
+  // ---------- Sidebar tab logic ----------
+  const tabButtons = document.querySelectorAll('.tablink');
+  const panels = {
+    predictions: document.getElementById('panel-predictions'),
+    analytics:   document.getElementById('panel-analytics'),
+    data:        document.getElementById('panel-data'),
+  };
+
+  function setActiveTab(nameRaw){
+    const name = (nameRaw || 'predictions').toLowerCase();
+    const panel = panels[name] || panels['predictions'];
+
+    // show/hide panels
+    Object.values(panels).forEach(p => p && p.classList.add('hidden'));
+    if (panel) panel.classList.remove('hidden');
+
+    // button styles
+    tabButtons.forEach(btn => {
+      const isActive = (btn.dataset.tab || '').toLowerCase() === name;
+      btn.className = 'tablink flex items-center px-5 py-3 rounded-r-full mb-2 transition ' +
+        (isActive ? 'bg-[#0b1f52] text-white font-semibold shadow-sm'
+                  : 'text-slate-700 hover:bg-slate-200');
+      if (isActive) btn.setAttribute('aria-current','page'); else btn.removeAttribute('aria-current');
+    });
+  }
+
+  tabButtons.forEach(btn => btn.addEventListener('click', () => setActiveTab(btn.dataset.tab)));
+  setActiveTab('predictions');
+
+  // ---------- Colors / Chart defaults ----------
+  const PB_GRAY_D = '#434A52', PB_GRAY_L='#CFD3DA';
+  const ACTUAL = '#16A34A', PRED='#F4B000', FUTURE='#0B1F52';
+  const STAGES = ['Start','Press','Glaze','Kiln','Sort'];
+
+  Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+  Chart.defaults.color = PB_GRAY_D;
+  Chart.defaults.plugins.legend.display = false;
+
+  // Helpers
+  const $ = id => document.getElementById(id);
+  const fields = [
+    'recipe_id','vol_start','pressure_psi','glaze_pressure_psi',
+    'max_temp','cooling_profile','moisture_pct','external_humidity',
+    'air_flow_top_setting','air_cooling','thickness_mm',
+    'vol_press_out','vol_glaze_out','vol_kiln_out'
+  ];
+  function setVal(id,v){
+    const el = $(id);
+    if(!el) return;
+    if(el.tagName === 'SELECT'){
+      el.value = (v==null||v==='') ? '' : String(v);
+    }else{
+      el.value = (v==null||Number.isNaN(v))?'':v;
+    }
+  }
+  function logDebug(msg){
+    const el = document.getElementById('debugLog');
+    el.textContent += (typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2)) + '\n';
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // ----- Line chart with tooltips (value + loss vs Start + min) -----
+  let stageStatus = ['future','future','future','future','future'];
+  let lastVols = [null,null,null,null,null];
+  let lastMins = [null,null,null,null,null];
+  function colorFor(i){ return stageStatus[i]==='actual'?ACTUAL:(stageStatus[i]==='pred'?PRED:FUTURE); }
+  const fmt = n => (n==null||!isFinite(n)) ? '-' : n.toLocaleString();
+
+  const lossLineChart = new Chart(document.getElementById('lossLineChart'), {
+    type:'line',
+    data:{
+      labels: STAGES,
+      datasets:[
+        { // Volume
+          label:'Volume',
+          data:[null,null,null,null,null],
+          borderWidth:2, tension:0.3, fill:false,
+          segment:{ borderColor:(ctx)=>colorFor(ctx.p0DataIndex) },
+          pointBackgroundColor:(ctx)=>colorFor(ctx.dataIndex),
+          pointRadius:4, pointHoverRadius:6
+        },
+        { // Min Required (dashed)
+          label:'Min Required',
+          data:[null,null,null,null,null],
+          borderWidth:1.5, borderDash:[6,6],
+          borderColor:PRED, pointRadius:0, tension:0.3, fill:false
+        }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{
+        x:{ grid:{ display:false } },
+        y:{ beginAtZero:true, grid:{ color:PB_GRAY_L } }  // start at 0
+      },
+      plugins:{
+        tooltip:{
+          callbacks:{
+            title:(items)=>{
+              const i = items[0].dataIndex;
+              return `Stage ${i+1} — ${STAGES[i]}`;
+            },
+            label:(item)=>{
+              const i = item.dataIndex;
+              const val = lastVols[i];
+              const status = stageStatus[i]==='actual' ? 'Actual'
+                            : stageStatus[i]==='pred'   ? 'Predicted'
+                            : 'Future';
+              if(val==null) return 'No data';
+              return `Value: ${fmt(val)} ft² (${status})`;
+            },
+            afterLabel:(item)=>{
+              const i = item.dataIndex;
+              const start = lastVols[0];
+              const val   = lastVols[i];
+              const minV  = lastMins[i];
+              if(start==null || val==null) return '';
+              const loss  = Math.max(0, start - val);
+              const pct   = start>0 ? (loss/start*100) : 0;
+              const lines = [`Loss vs Start: ${fmt(loss)} ft² (${pct.toFixed(2)}%)`];
+              if(minV!=null && stageStatus[i]==='pred'){
+                lines.push(`Min Required: ${fmt(minV)} ft²`);
+              }
+              return '\n' + lines.join('\n');
+            }
+          }
+        }
+      }
+    }
+  });
+
+  function updateChart(vols, mins, statuses){
+    stageStatus = statuses.slice();
+    lastVols = vols.slice();
+    lastMins = mins.slice();
+    lossLineChart.data.datasets[0].data = vols;
+    lossLineChart.data.datasets[1].data = mins;
+    lossLineChart.update();
+  }
+
+  // Badges
+  function setBadges(states){
+    const ids = ['badgeStart','badgePress','badgeGlaze','badgeKiln'];
+    ids.forEach((id,i)=>{
+      const st = states?states[i]:null;
+      const txt = st?st:'blocked';
+      const cls = st==='actual' ? 'bg-green-100 text-green-700'
+               : st==='pred'   ? 'bg-amber-100 text-amber-700'
+               : 'bg-slate-100 text-slate-600';
+      const el = document.getElementById(id);
+      el.textContent = txt;
+      el.className = `text-xs px-2 py-0.5 rounded ${cls}`;
+    });
+  }
+
+  function resetAll(){
+    fields.forEach(f=> setVal(f,''));
+    updateChart([null,null,null,null,null],[null,null,null,null,null],['future','future','future','future','future']);
+    setBadges();
+    $('inputHint').textContent='Enter Start → add actuals or inputs to unlock predictions.';
+  }
+
+  // ------------------- Pyodide + Auto-load model -------------------
+  let pyodide, modelLoaded = false;
+  const MODEL_PATH = '/tmp/ml_model.joblib';  // mounted copy in FS
+  const MODEL_URL  = 'ml_model.joblib';       // must exist next to this HTML
+
+  async function initPy(){
+    $('statusText').textContent = 'Loading Python…';
+    try{
+      pyodide = await loadPyodide();
+      try { await pyodide.loadPackage(['numpy','pandas','scikit-learn','joblib']); }
+      catch(e){ console.warn('Package load warning:', e); logDebug(e.toString()); }
+      const pyCode = `
+import math, json, numpy as np, pandas as pd, joblib
+bundle=None
+press_model=glaze_model=kiln_model=None
+stage_features={}
+recipe_setpoints={}
+THRESH_MARGIN=0.03
+SORT_MIN=0.90
+SORT_DEFAULT=0.90
+SORT_MAX=0.92
+
+def load_model(path):
+    global bundle, press_model, glaze_model, kiln_model, THRESH_MARGIN, SORT_MIN, SORT_DEFAULT, SORT_MAX, stage_features, recipe_setpoints
+    bundle = joblib.load(path)
+    if isinstance(bundle, dict) and "models" in bundle:
+        press_model = bundle["models"]["press_ratio"]
+        glaze_model = bundle["models"]["glaze_ratio"]
+        kiln_model  = bundle["models"]["kiln_ratio"]
+        stage_features = bundle.get("stage_features", {})
+        recipe_setpoints = bundle.get("recipe_setpoints", {})
+        cfg = bundle.get("config", {})
+        THRESH_MARGIN = cfg.get("THRESHOLD_MARGIN", THRESH_MARGIN)
+        SORT_MIN      = cfg.get("SORT_MIN", SORT_MIN)
+        SORT_DEFAULT  = cfg.get("SORT_DEFAULT", SORT_DEFAULT)
+        SORT_MAX      = cfg.get("SORT_MAX", SORT_MAX)
+    else:
+        press_model = bundle["press_ratio"]
+        glaze_model = bundle["glaze_ratio"]
+        kiln_model  = bundle["kiln_ratio"]
+        stage_features = {
+            "press_ratio": ["vol_start","pressure_psi","recipe_id"],
+            "glaze_ratio": ["recipe_id","vol_press_out","pressure_psi"],
+            "kiln_ratio":  ["recipe_id","vol_glaze_out","max_temp","cooling_profile","moisture_pct","external_humidity","air_flow_top_setting","air_cooling","thickness_mm"]
+        }
+        recipe_setpoints = {}
+    return True
+
+def _sp_for(rid):
+    try:
+        return recipe_setpoints.get(int(rid), {})
+    except Exception:
+        return {}
+
+def _feature_row(feats, d, suppl=None):
+    row={}
+    src = dict(d)
+    if suppl: src.update(suppl)
+    sp = _sp_for(src.get("recipe_id"))
+    for f in feats:
+        if f in src and src[f] is not None and not (isinstance(src[f], float) and math.isnan(src[f])):
+            row[f] = src[f]; continue
+        if f.startswith("k_set_"):
+            row[f] = sp.get(f, math.nan); continue
+        if f.startswith("delta_"):
+            base = f.replace("delta_","")
+            set_key = "k_set_"+base if not base.startswith("k_set_") else base
+            m = src.get(base, math.nan)
+            s = sp.get(set_key, math.nan)
+            try:
+                row[f] = float(m) - float(s)
+            except Exception:
+                row[f] = math.nan
+            continue
+        row[f] = math.nan
+    return row
+
+def _df_for(stage_key, d, suppl=None):
+    feats = stage_features.get(stage_key, [])
+    return pd.DataFrame([_feature_row(feats, d, suppl)])
+
+def _round0(x):
+    try: return int(round(float(x)))
+    except: return None
+
+def predict(payload):
+    d = payload
+    res = {
+      "stages": {
+        "start":{"status":"blocked","amount":None,"min_required":None,"ratio":1.0},
+        "press":{"status":"blocked","amount":None,"min_required":None,"ratio":None},
+        "glaze":{"status":"blocked","amount":None,"min_required":None,"ratio":None},
+        "kiln" :{"status":"blocked","amount":None,"min_required":None,"ratio":None},
+        "sort" :{"status":"blocked","amount":None,"min_required":None,"ratio":SORT_DEFAULT}
+      }
+    }
+    # START
+    if d.get("vol_start") is None or (isinstance(d.get("vol_start"), float) and math.isnan(d.get("vol_start"))):
+        return res
+    start = float(d["vol_start"])
+    res["stages"]["start"].update(status="actual", amount=_round0(start))
+
+    # PRESS
+    press_actual = d.get("vol_press_out")
+    if press_actual is not None and not (isinstance(press_actual,float) and math.isnan(press_actual)):
+        press_amt = min(float(press_actual), start)
+        res["stages"]["press"].update(status="actual", amount=_round0(press_amt))
+        press_base = press_amt
+    else:
+        df_press = _df_for("press_ratio", d)
+        pr = float(press_model.predict(df_press)[0])
+        press_amt = min(start * pr, start)
+        min_req = start * max(0.0, pr - THRESH_MARGIN)
+        res["stages"]["press"].update(status="pred", amount=_round0(press_amt), min_required=_round0(min_req), ratio=pr)
+        press_base = press_amt
+
+    # GLAZE
+    glaze_actual = d.get("vol_glaze_out")
+    if glaze_actual is not None and not (isinstance(glaze_actual,float) and math.isnan(glaze_actual)):
+        glaze_amt = min(float(glaze_actual), press_base)
+        res["stages"]["glaze"].update(status="actual", amount=_round0(glaze_amt))
+        glaze_base = glaze_amt
+    else:
+        df_glaze = _df_for("glaze_ratio", d, {"vol_press_out": press_base})
+        gr = float(glaze_model.predict(df_glaze)[0])
+        glaze_amt = min(press_base * gr, press_base)
+        min_req = press_base * max(0.0, gr - THRESH_MARGIN)
+        res["stages"]["glaze"].update(status="pred", amount=_round0(glaze_amt), min_required=_round0(min_req), ratio=gr)
+        glaze_base = glaze_amt
+
+    # KILN
+    kiln_actual = d.get("vol_kiln_out")
+    if kiln_actual is not None and not (isinstance(kiln_actual,float) and math.isnan(kiln_actual)):
+        kiln_amt = min(float(kiln_actual), glaze_base)
+        res["stages"]["kiln"].update(status="actual", amount=_round0(kiln_amt))
+        kiln_base = kiln_amt
+    else:
+        df_kiln = _df_for("kiln_ratio", d, {"vol_glaze_out": glaze_base})
+        kr = float(kiln_model.predict(df_kiln)[0])
+        kiln_amt = min(glaze_base * kr, glaze_base)
+        min_req = glaze_base * max(0.0, kr - THRESH_MARGIN)
+        res["stages"]["kiln"].update(status="pred", amount=_round0(kiln_amt), min_required=_round0(min_req), ratio=kr)
+        kiln_base = kiln_amt
+
+    # SORT (rule)
+    sr = float(SORT_DEFAULT)
+    sort_amt = min(kiln_base * sr, kiln_base)
+    min_req = kiln_base * max(SORT_MIN, sr - 0.02)
+    res["stages"]["sort"].update(status="pred", amount=_round0(sort_amt), min_required=_round0(min_req), ratio=sr)
+    return res
+      `;
+      await pyodide.runPythonAsync(pyCode);
+      $('statusText').textContent = 'Python ready. Loading model…';
+      await autoLoadModel();
+    }catch(e){
+      $('statusText').textContent = 'Python failed to load.';
+      logDebug(e.toString());
+    }
+  }
+
+  async function autoLoadModel(){
+    try{
+      const resp = await fetch(MODEL_URL, { cache: 'no-store' });
+      if(!resp.ok) throw new Error('HTTP '+resp.status+' fetching '+MODEL_URL);
+      const buf = await resp.arrayBuffer();
+
+      try { pyodide.FS.mkdir('/tmp',{mode:0o777}); } catch(e){}
+      try { pyodide.FS.unlink(MODEL_PATH); } catch(e){}
+      pyodide.FS.writeFile(MODEL_PATH, new Uint8Array(buf));
+
+      // FIX: wrap the Python call in a string
+      await pyodide.runPythonAsync(`load_model("${MODEL_PATH}")`);
+      modelLoaded = true;
+      $('statusText').textContent = 'Model loaded ✅ (ml_model.joblib)';
+      logDebug('Model loaded from '+MODEL_URL);
+
+      // Auto-run prediction now that the model is ready
+      predictNow();
+    }catch(e){
+      modelLoaded = false;
+      $('statusText').textContent = 'Could not load ml_model.joblib. Place it next to this HTML and open via http(s).';
+      logDebug(e.toString());
+    }
+  }
+
+  async function predictNow(){
+    if(!modelLoaded){ $('statusText').textContent = 'Model not loaded.'; return; }
+
+    const payload = Object.fromEntries(
+      [
+        'recipe_id','vol_start','pressure_psi','glaze_pressure_psi',
+        'max_temp','cooling_profile','moisture_pct','external_humidity',
+        'air_flow_top_setting','air_cooling','thickness_mm',
+        'vol_press_out','vol_glaze_out','vol_kiln_out'
+      ].map(k => {
+        const el = $(k);
+        const raw = el.tagName==='SELECT' ? el.value : el.value;
+        return [k, (raw===''?null:Number(raw))];
+      })
+    );
+
+    let resObj;
+    try{
+      const pyPredict = pyodide.globals.get('predict');
+      const pyPayload = pyodide.toPy(payload);
+      const pyOut = pyPredict(pyPayload);
+      resObj = pyOut.toJs({ dict_converter: Object.fromEntries });
+      pyPayload.destroy(); pyOut.destroy(); pyPredict.destroy();
+    }catch(e){
+      $('statusText').textContent='Prediction failed. Check inputs.';
+      logDebug('Predict error: '+e.toString());
+      return;
+    }
+
+    const d = resObj.stages;
+    const vols = [d.start.amount, d.press.amount, d.glaze.amount, d.kiln.amount, d.sort.amount];
+    const mins = [d.start.min_required, d.press.min_required, d.glaze.min_required, d.kiln.min_required, d.sort.min_required];
+    const statuses = ['start','press','glaze','kiln','sort'].map(k=>{
+      const s = d[k].status; return s==='blocked'?'future':(s==='actual'?'actual':'pred');
+    });
+
+    setBadges([statuses[0],statuses[1],statuses[2],statuses[3]]);
+    updateChart(vols, mins, statuses);
+
+    const hints=[];
+    if(statuses[1]==='future') hints.push('Press needs pressure_psi or actual Press output.');
+    if(statuses[2]==='future') hints.push('Glaze needs glaze_pressure_psi (or pressure_psi) or actual Glaze output.');
+    if(statuses[3]==='future') hints.push('Kiln benefits from temp/cooling/moisture/humidity/air settings — but will impute if missing.');
+    $('inputHint').textContent = hints.join(' ');
+    $('statusText').textContent = 'Done.';
+  }
+
+  // ---------- Example: random stage, only fill up to that stage ----------
+  function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
+  function randFloat(a,b){ return a + Math.random()*(b-a); }
+
+  const SETPOINTS = {
+    241:{max_temp:1197, cooling_profile:5.2, moisture_pct:6.0, external_humidity:50, air_flow_top_setting:6.0, air_cooling:5.0, thickness_mm:8.5},
+    244:{max_temp:1195, cooling_profile:5.0, moisture_pct:6.0, external_humidity:48, air_flow_top_setting:5.8, air_cooling:5.1, thickness_mm:8.5},
+    245:{max_temp:1196, cooling_profile:5.3, moisture_pct:6.0, external_humidity:52, air_flow_top_setting:6.2, air_cooling:4.9, thickness_mm:8.5},
+    246:{max_temp:1194, cooling_profile:4.9, moisture_pct:6.0, external_humidity:47, air_flow_top_setting:5.7, air_cooling:5.2, thickness_mm:8.5},
+    247:{max_temp:1198, cooling_profile:5.1, moisture_pct:6.0, external_humidity:49, air_flow_top_setting:6.1, air_cooling:5.0, thickness_mm:8.5}
+  };
+
+  function clearAll(){
+    ['pressure_psi','glaze_pressure_psi','max_temp','cooling_profile','moisture_pct','external_humidity','air_flow_top_setting','air_cooling','thickness_mm','vol_press_out','vol_glaze_out','vol_kiln_out'].forEach(id=>setVal(id,''));
+  }
+
+  function loadExample(){
+    // random recipe id from dropdown
+    const ids = [241,244,245,246,247];
+    const rid = ids[Math.floor(Math.random()*ids.length)];
+    setVal('recipe_id', rid);
+
+    // random stage: 0 Start only, 1 Up to Press, 2 Up to Glaze, 3 Up to Kiln
+    const stageIdx = Math.floor(Math.random()*4);
+
+    // base start volume
+    const start = randInt(56000, 90000);
+    setVal('vol_start', start);
+
+    clearAll();
+
+    // Optional inputs and "actuals" up to the chosen stage
+    if(stageIdx >= 1){
+      setVal('pressure_psi', Math.round(randFloat(3000, 3200)));
+    }
+    if(stageIdx >= 2){
+      setVal('glaze_pressure_psi', Math.round(randFloat(1400, 1700)));
+    }
+    if(stageIdx >= 3){
+      const sp = SETPOINTS[rid];
+      setVal('max_temp', Math.round(sp.max_temp + randFloat(-2, 2)));
+      setVal('cooling_profile', (sp.cooling_profile + randFloat(-0.2, 0.2)).toFixed(1));
+      setVal('moisture_pct', (sp.moisture_pct + randFloat(-0.4, 0.4)).toFixed(1));
+      setVal('external_humidity', Math.round(sp.external_humidity + randFloat(-3, 3)));
+      setVal('air_flow_top_setting', (sp.air_flow_top_setting + randFloat(-0.3, 0.3)).toFixed(1));
+      setVal('air_cooling', (sp.air_cooling + randFloat(-0.3, 0.3)).toFixed(1));
+      setVal('thickness_mm', sp.thickness_mm);
+    }
+
+    // Realistic "actuals" up to stage (green)
+    const press_out = Math.round(start * randFloat(0.987, 0.994));
+    const glaze_out = Math.round(press_out * randFloat(0.988, 0.993));
+    const kiln_out  = Math.round(glaze_out * randFloat(0.958, 0.969));
+
+    if(stageIdx >= 1) setVal('vol_press_out', press_out);
+    if(stageIdx >= 2) setVal('vol_glaze_out', glaze_out);
+    if(stageIdx >= 3) setVal('vol_kiln_out',  kiln_out);
+
+    const labels = ['Start only','Up to Press','Up to Glaze','Up to Kiln'];
+    $('statusText').textContent = `Example loaded: ${labels[stageIdx]} (ID ${rid}). Predicting…`;
+  }
+
+  // Events
+  document.getElementById('btnPredict').addEventListener('click', predictNow);
+  document.getElementById('btnReset').addEventListener('click', resetAll);
+  document.getElementById('btnExample').addEventListener('click', () => { loadExample(); if (modelLoaded) predictNow(); });
+
+  // Boot: reset, auto-fill an example, then init Python; autoLoadModel() will auto-predict
+  resetAll();
+  loadExample();
+  initPy();
+</script>
+</body>
+</html>

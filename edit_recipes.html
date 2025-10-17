@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analytics — Recipe Setpoints | Portobello Dashboard</title>
+
+  <!-- Inter + Tailwind -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
+          colors: {
+            pbBlue: '#0B1F52',
+            pbGrayLight: '#CFD3DA',
+            pbGrayMid:   '#7C8390',
+            pbGrayDark:  '#434A52'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800 font-sans">
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
+    <div class="relative w-full py-5 pl-3 flex items-center">
+      <a href="/" class="shrink-0">
+        <img src="assets/images/logo_portobello_america_CORES_pantone_655.png" alt="Portobello America" class="h-16 w-auto object-contain block" />
+      </a>
+      <h1 class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none">
+        Tile Material Dashboard
+      </h1>
+      <div class="ml-auto"></div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <!-- Global sidebar -->
+    <script src="sidebar.js" defer></script>
+
+    <!-- MAIN -->
+    <main class="flex-1 overflow-auto">
+      <div class="mx-auto max-w-7xl px-6 md:px-8 py-8">
+        <div class="flex items-center justify-between">
+          <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Recipe Setpoints</h2>
+          <div id="dataStatus" class="text-sm text-slate-500"></div>
+        </div>
+
+        <section class="mt-6 rounded-2xl border bg-white p-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btnUseMedians" class="px-3 py-1.5 rounded border">Reset All to Medians</button>
+            <button id="btnSave" class="px-3 py-1.5 rounded bg-pbBlue text-white">Save All</button>
+            <button id="btnLoad" class="px-3 py-1.5 rounded border">Load Saved</button>
+            <button id="btnExport" class="px-3 py-1.5 rounded border">Export JSON</button>
+            <label class="px-3 py-1.5 rounded border cursor-pointer">
+              Import JSON<input id="fileImport" type="file" accept="application/json" class="hidden">
+            </label>
+            <span id="saveMsg" class="text-xs text-slate-600 ml-2"></span>
+          </div>
+
+          <div class="overflow-auto mt-4">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-600">
+                <tr>
+                  <th class="text-left px-3 py-2">Recipe</th>
+                  <th class="text-right px-3 py-2">Max Temp (°C)</th>
+                  <th class="text-right px-3 py-2">Cooling</th>
+                  <th class="text-right px-3 py-2">Moisture %</th>
+                  <th class="text-right px-3 py-2">Humidity %</th>
+                  <th class="text-right px-3 py-2">Air Flow</th>
+                  <th class="text-right px-3 py-2">Air Cooling</th>
+                  <th class="text-right px-3 py-2">Thickness (mm)</th>
+                  <th class="text-left px-3 py-2">Edit</th>
+                </tr>
+              </thead>
+              <tbody id="recipesBody"></tbody>
+            </table>
+          </div>
+
+          <p class="text-xs text-slate-500 mt-3">
+            Your edits are saved to <code>localStorage</code> as <strong>pb_recipe_setpoints_v1</strong>. Other tabs/pages can read these values.
+          </p>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal -->
+  <div id="editModal" class="fixed inset-0 hidden items-center justify-center bg-black/40 z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-xl p-4">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="font-semibold text-lg">Edit Recipe <span id="modalRid" class="text-pbBlue"></span></h3>
+        <button id="modalClose" class="px-2 py-1 text-sm rounded border">Close</button>
+      </div>
+
+      <div id="modalForm" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2"></div>
+
+      <div class="flex justify-between items-center mt-4">
+        <button id="modalReset" class="px-3 py-1.5 rounded border">Reset to Median</button>
+        <div class="flex gap-2">
+          <button id="modalSave" class="px-3 py-1.5 rounded bg-pbBlue text-white">Save Changes</button>
+          <button id="modalSavePersist" class="px-3 py-1.5 rounded border">Save & Persist</button>
+        </div>
+      </div>
+      <p id="modalMsg" class="text-xs text-slate-600 mt-2"></p>
+    </div>
+  </div>
+
+<script>
+/* ====== Utils ====== */
+const $=id=>document.getElementById(id);
+const toNum=v=>{ if(v==null||v==='')return NaN; const n=Number(String(v).replace(/,/g,'')); return Number.isFinite(n)?n:NaN; };
+const parseCSV=(text)=>{
+  const clean=text.replace(/^\uFEFF/,'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const lines=clean.split('\n').filter(l=>l.trim()!==''); if(!lines.length) return {columns:[],rows:[]};
+  const parseLine=(line)=>{ const out=[]; let cur=''; let inQ=false;
+    for(let i=0;i<line.length;i++){ const ch=line[i];
+      if(ch==='"'){ if(inQ&&line[i+1]==='"'){cur+='"';i++;} else inQ=!inQ; continue; }
+      if(ch===','&&!inQ){ out.push(cur); cur=''; continue; } cur+=ch;
+    } out.push(cur); return out;
+  };
+  const headers=parseLine(lines[0]).map(h=>h.trim());
+  const rows=lines.slice(1).map(l=>{ const p=parseLine(l); const o={};
+    for(let i=0;i<headers.length;i++) o[headers[i]]=(p[i]??'').trim();
+    return o;
+  });
+  return {columns:headers, rows};
+};
+const groupBy=(rows,key)=>rows.reduce((m,r)=>{const k=r[key];(m[k]||(m[k]=[])).push(r);return m;},{});
+const median=(arr)=>{ if(!arr.length) return NaN; const s=[...arr].sort((a,b)=>a-b); const m=Math.floor(s.length/2); return s.length%2?s[m]:(s[m-1]+s[m])/2; };
+
+/* ====== Keys/Fields + labels ====== */
+const FIELDS = [
+  { key:'max_temp',             step:1,   label:'Max Temp (°C)',      fmt:v=>isFinite(v)?String(Math.round(v)):'' },
+  { key:'cooling_profile',      step:0.1, label:'Cooling',            fmt:v=>isFinite(v)?v.toFixed(1):'' },
+  { key:'moisture_pct',         step:0.1, label:'Moisture %',         fmt:v=>isFinite(v)?v.toFixed(1):'' },
+  { key:'external_humidity',    step:1,   label:'Humidity %',         fmt:v=>isFinite(v)?String(Math.round(v)):'' },
+  { key:'air_flow_top_setting', step:0.1, label:'Air Flow',           fmt:v=>isFinite(v)?v.toFixed(1):'' },
+  { key:'air_cooling',          step:0.1, label:'Air Cooling',        fmt:v=>isFinite(v)?v.toFixed(1):'' },
+  { key:'thickness_mm',         step:0.1, label:'Thickness (mm)',     fmt:v=>isFinite(v)?v.toFixed(1):'' },
+];
+
+const STORAGE_KEY='pb_recipe_setpoints_v1';
+const DATA={columns:[],rows:[]};
+let mediansByRecipe={};   // computed medians
+let currentValues={};     // editable values (loaded/saved)
+let modalRid=null;        // which recipe is open in modal right now
+
+/* ====== Load CSV ====== */
+fetch('tiles6.csv')
+  .then(r=>r.text())
+  .then(txt=>{
+    Object.assign(DATA, parseCSV(txt));
+    $('dataStatus').textContent = `${DATA.rows.length} rows loaded`;
+    computeMedians();
+    loadSavedOrMedians();
+    renderTable();
+  })
+  .catch(()=>{$('dataStatus').textContent='Could not load tiles6.csv';});
+
+function computeMedians(){
+  const byR = groupBy(DATA.rows, 'recipe_id');
+  mediansByRecipe = {};
+  Object.keys(byR).forEach(rid=>{
+    const rows=byR[rid];
+    const medFor = key => {
+      const vals=rows.map(v=>toNum(v[key])).filter(Number.isFinite);
+      return median(vals);
+    };
+    mediansByRecipe[rid] = Object.fromEntries(
+      FIELDS.map(f => [f.key, medFor(f.key)])
+    );
+  });
+}
+
+function loadSavedOrMedians(){
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if(saved){
+    try{ currentValues = JSON.parse(saved) || {}; }
+    catch{ currentValues = {}; }
+  }
+  // Fill in any missing recipes from medians
+  Object.keys(mediansByRecipe).forEach(rid=>{
+    if(!currentValues[rid]) currentValues[rid] = {...mediansByRecipe[rid]};
+  });
+}
+
+/* ====== Render table ====== */
+function fmt(key, val){
+  const f = FIELDS.find(x=>x.key===key);
+  return f ? f.fmt(val) : (isFinite(val)? String(val) : '');
+}
+function rowHtml(rid, row){
+  return `<tr class="border-t" id="row-${rid}">
+    <td class="px-3 py-2 font-medium">${rid}</td>
+    <td class="px-3 py-2 text-right">${fmt('max_temp', row.max_temp)}</td>
+    <td class="px-3 py-2 text-right">${fmt('cooling_profile', row.cooling_profile)}</td>
+    <td class="px-3 py-2 text-right">${fmt('moisture_pct', row.moisture_pct)}</td>
+    <td class="px-3 py-2 text-right">${fmt('external_humidity', row.external_humidity)}</td>
+    <td class="px-3 py-2 text-right">${fmt('air_flow_top_setting', row.air_flow_top_setting)}</td>
+    <td class="px-3 py-2 text-right">${fmt('air_cooling', row.air_cooling)}</td>
+    <td class="px-3 py-2 text-right">${fmt('thickness_mm', row.thickness_mm)}</td>
+    <td class="px-3 py-2">
+      <button class="inline-flex items-center gap-1 px-2 py-1 rounded border hover:bg-slate-50"
+              data-edit="${rid}" title="Edit">
+        <!-- Pencil icon (inline SVG) -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+             stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M16.862 3.487a2.25 2.25 0 113.182 3.182L7.5 19.313l-4.5 1.125 1.125-4.5L16.862 3.487z" />
+        </svg>
+        <span class="text-xs">Edit</span>
+      </button>
+    </td>
+  </tr>`;
+}
+function renderTable(){
+  const rids = Object.keys(currentValues).sort((a,b)=>Number(a)-Number(b));
+  $('recipesBody').innerHTML = rids.map(rid => rowHtml(rid, currentValues[rid])).join('');
+  // wire edit buttons
+  document.querySelectorAll('button[data-edit]').forEach(btn=>{
+    btn.addEventListener('click', ()=> openModal(btn.getAttribute('data-edit')));
+  });
+}
+
+/* ====== Modal helpers ====== */
+function openModal(rid){
+  modalRid = rid;
+  $('modalRid').textContent = rid;
+  // build form
+  const form = $('modalForm');
+  form.innerHTML = FIELDS.map(f=>{
+    const val = currentValues[rid]?.[f.key];
+    return `<label class="block">
+      <span class="block text-xs text-slate-600 mb-1">${f.label}</span>
+      <input type="number" step="${f.step}" data-key="${f.key}"
+             class="w-full border rounded px-2 py-1"
+             value="${f.fmt(val)}" />
+    </label>`;
+  }).join('');
+  $('modalMsg').textContent = '';
+  const modal = $('editModal');
+  modal.classList.remove('hidden'); modal.classList.add('flex');
+}
+function closeModal(){
+  $('editModal').classList.add('hidden'); $('editModal').classList.remove('flex');
+  modalRid = null;
+}
+$('modalClose').addEventListener('click', closeModal);
+
+// Save changes (in-memory only)
+$('modalSave').addEventListener('click', ()=>{
+  if(!modalRid) return;
+  const inputs = [...document.querySelectorAll('#modalForm input[data-key]')];
+  inputs.forEach(inp=>{
+    const k = inp.getAttribute('data-key');
+    const v = toNum(inp.value);
+    currentValues[modalRid][k] = Number.isFinite(v) ? v : null;
+  });
+  renderTable();
+  $('modalMsg').textContent = 'Updated (not yet saved).';
+});
+
+// Save & persist immediately
+$('modalSavePersist').addEventListener('click', ()=>{
+  if(!modalRid) return;
+  const inputs = [...document.querySelectorAll('#modalForm input[data-key]')];
+  inputs.forEach(inp=>{
+    const k = inp.getAttribute('data-key');
+    const v = toNum(inp.value);
+    currentValues[modalRid][k] = Number.isFinite(v) ? v : null;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(currentValues));
+  renderTable();
+  $('modalMsg').textContent = 'Saved to localStorage.';
+});
+
+// Reset current recipe to median values in modal
+$('modalReset').addEventListener('click', ()=>{
+  if(!modalRid) return;
+  const med = mediansByRecipe[modalRid] || {};
+  document.querySelectorAll('#modalForm input[data-key]').forEach(inp=>{
+    const k = inp.getAttribute('data-key');
+    const v = med[k];
+    inp.value = FIELDS.find(f=>f.key===k).fmt(v);
+  });
+  $('modalMsg').textContent = 'Reset this recipe to medians (not yet saved).';
+});
+
+/* ====== Top-level actions ====== */
+$('btnUseMedians').addEventListener('click', ()=>{
+  currentValues = JSON.parse(JSON.stringify(mediansByRecipe));
+  renderTable();
+  $('saveMsg').textContent = 'All recipes reset to medians (not yet saved).';
+});
+$('btnSave').addEventListener('click', ()=>{
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(currentValues));
+  $('saveMsg').textContent = 'Saved all to localStorage.';
+});
+$('btnLoad').addEventListener('click', ()=>{
+  loadSavedOrMedians();
+  renderTable();
+  $('saveMsg').textContent = 'Loaded saved values.';
+});
+$('btnExport').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(currentValues,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='recipe_setpoints.json'; a.click();
+  URL.revokeObjectURL(url);
+});
+$('fileImport').addEventListener('change', (e)=>{
+  const file = e.target.files?.[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload = () => {
+    try{
+      const obj = JSON.parse(String(reader.result));
+      if(typeof obj === 'object' && obj){
+        currentValues = obj;
+        renderTable();
+        $('saveMsg').textContent = 'Imported (not yet saved).';
+      }
+    }catch{
+      $('saveMsg').textContent = 'Invalid JSON.';
+    }
+  };
+  reader.readAsText(file);
+});
+
+// Close modal on ESC or backdrop click
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
+$('editModal').addEventListener('click', (e)=>{ if(e.target.id==='editModal') closeModal(); });
+</script>
+</body>
+</html>

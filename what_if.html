@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analytics — What-If | Portobello Dashboard</title>
+
+  <!-- Inter font -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'] },
+          colors: {
+            pbBlue: '#0B1F52',
+            pbSlate: '#6B7280',
+            pbGrayLight: '#CFD3DA',
+            pbGrayMid:   '#7C8390',
+            pbGrayDark:  '#434A52'
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Pyodide (for What-If predictions) -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js"></script>
+</head>
+
+<body class="h-screen flex flex-col bg-gradient-to-b from-slate-50 to-slate-100 text-slate-800 font-sans">
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
+    <div class="relative w-full py-5 pl-3 flex items-center">
+      <!-- Left: Logo with tiny left padding -->
+      <a href="/" class="shrink-0">
+        <img
+          src="assets/images/logo_portobello_america_CORES_pantone_655.png"
+          alt="Portobello America"
+          class="h-16 w-auto object-contain block"
+        />
+      </a>
+
+      <!-- Center: Title -->
+      <h1
+        class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none"
+      >
+        Tile Material Dashboard
+      </h1>
+
+      <!-- Right spacer -->
+      <div class="ml-auto"></div>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden">
+    <!-- Global sidebar (injected) -->
+    <script src="sidebar.js" defer></script>
+
+    <!-- MAIN -->
+    <main class="flex-1 overflow-auto">
+      <div class="mx-auto max-w-7xl px-6 md:px-8 py-8">
+        <div class="flex items-center justify-between">
+          <h2 class="text-3xl font-semibold tracking-tight text-slate-900">What-If</h2>
+          <div id="dataStatus" class="text-sm text-slate-500"></div>
+        </div>
+
+        <!-- ===================== WHAT-IF ONLY ===================== -->
+        <section id="panel-whatif" class="mt-6">
+          <div class="grid grid-cols-12 gap-4">
+            <!-- Controls -->
+            <div class="col-span-12 lg:col-span-4 rounded-2xl border bg-white p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-semibold">What-If Simulator</h3>
+                <span id="wfStatus" class="text-xs text-slate-500">Loading…</span>
+              </div>
+
+              <label class="block text-sm mb-1">Recipe ID</label>
+              <select id="wf_recipe_id" class="w-full border rounded p-2 mb-3 bg-white">
+                <option value="241">241</option>
+                <option value="244">244</option>
+                <option value="245" selected>245</option>
+                <option value="246">246</option>
+                <option value="247">247</option>
+              </select>
+
+              <label class="block text-sm">Start Volume</label>
+              <input id="wf_vol_start" type="number" class="w-full border rounded p-2 mb-4" value="80000"/>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div class="col-span-1">
+                  <label class="block text-xs">Press (psi)</label>
+                  <input id="wf_pressure_psi" type="range" min="2500" max="3400" step="10" value="3100" class="w-full"/>
+                  <div class="text-xs text-slate-500"><span id="wf_pressure_val">3100</span> psi</div>
+                </div>
+                <div class="col-span-1">
+                  <label class="block text-xs">Glaze (psi)</label>
+                  <input id="wf_glaze_pressure_psi" type="range" min="1200" max="1900" step="10" value="1550" class="w-full"/>
+                  <div class="text-xs text-slate-500"><span id="wf_glaze_val">1550</span> psi</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-3 mt-4">
+                <div>
+                  <label class="block text-xs">Max Temp °C</label>
+                  <input id="wf_max_temp" type="range" min="1188" max="1202" step="1" value="1196" class="w-full"/>
+                  <div class="text-xs text-slate-500"><span id="wf_temp_val">1196</span></div>
+                </div>
+                <div>
+                  <label class="block text-xs">Cooling</label>
+                  <input id="wf_cooling_profile" type="range" min="4.5" max="5.7" step="0.1" value="5.2" class="w-full"/>
+                  <div class="text-xs text-slate-500"><span id="wf_cool_val">5.2</span></div>
+                </div>
+                <div>
+                  <label class="block text-xs">Moisture %</label>
+                  <input id="wf_moisture_pct" type="range" min="5.0" max="6.8" step="0.1" value="6.0" class="w-full"/>
+                  <div class="text-xs text-slate-500"><span id="wf_moist_val">6.0</span>%</div>
+                </div>
+                <div>
+                  <label class="block text-xs">Humidity %</label>
+                  <input id="wf_external_humidity" type="range" min="40" max="60" step="1" value="52" class="w-full"/>
+                  <div class="text-xs text-slate-500"><span id="wf_hum_val">52</span>%</div>
+                </div>
+                <div>
+                  <label class="block text-xs">Air Flow</label>
+                  <input id="wf_air_flow_top_setting" type="range" min="5.2" max="6.6" step="0.1" value="6.2" class="w-full"/>
+                  <div class="text-xs text-slate-500"><span id="wf_airflow_val">6.2</span></div>
+                </div>
+                <div>
+                  <label class="block text-xs">Air Cooling</label>
+                  <input id="wf_air_cooling" type="range" min="4.4" max="5.6" step="0.1" value="4.9" class="w-full"/>
+                  <div class="text-xs text-slate-500"><span id="wf_aircool_val">4.9</span></div>
+                </div>
+                <div>
+                  <label class="block text-xs">Thickness (mm)</label>
+                  <input id="wf_thickness_mm" type="range" min="7.8" max="9.2" step="0.1" value="8.5" class="w-full"/>
+                  <div class="text-xs text-slate-500"><span id="wf_thick_val">8.5</span> mm</div>
+                </div>
+              </div>
+
+              <div class="mt-5 flex gap-2">
+                <button id="wfRun" class="px-3 py-1.5 rounded bg-pbBlue text-white">Run</button>
+                <button id="wfSens" class="px-3 py-1.5 rounded border">Sensitivity ±5%</button>
+                <button id="wfMC"   class="px-3 py-1.5 rounded border">Monte Carlo (200)</button>
+              </div>
+              <p id="wfHint" class="mt-2 text-xs text-slate-500"></p>
+            </div>
+
+            <!-- Charts -->
+            <div class="col-span-12 lg:col-span-8 grid grid-cols-12 gap-4">
+              <section class="col-span-12 rounded-2xl border bg-white p-4 h-[22rem]">
+                <div class="flex items-center justify-between mb-2">
+                  <h3 class="text-lg font-semibold">Predicted Material Flow</h3>
+                  <div class="flex items-center gap-2 text-xs text-slate-500">
+                    <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#0B1F52"></span> Scenario</span>
+                    <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
+                  </div>
+                </div>
+                <canvas id="wfLine"></canvas>
+              </section>
+              <section class="col-span-12 md:col-span-6 rounded-2xl border bg-white p-4 h-[16rem]">
+                <h3 class="text-lg font-semibold mb-2">Sensitivity (Δ final vs baseline)</h3>
+                <canvas id="wfTornado"></canvas>
+              </section>
+              <section class="col-span-12 md:col-span-6 rounded-2xl border bg-white p-4 h-[16rem]">
+                <h3 class="text-lg font-semibold mb-2">Final Yield — Monte Carlo</h3>
+                <canvas id="wfHist"></canvas>
+              </section>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+<script>
+/* ===================== THEME & HELPERS ===================== */
+const PB_GRAY_D='#434A52', PB_GRAY_L='#CFD3DA', PB_BLUE='#0B1F52';
+Chart.defaults.font.family='Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+Chart.defaults.color=PB_GRAY_D;
+Chart.defaults.plugins.legend.display=false;
+
+const STAGES = ['Start','Press','Glaze','Kiln','Sort'];
+const $ = id => document.getElementById(id);
+const toNum = (v) => {
+  if (v===null || v===undefined || v==='') return NaN;
+  const n = Number(String(v).replace(/,/g,''));
+  return Number.isFinite(n) ? n : NaN;
+};
+
+/* ===================== WHAT-IF UI BINDINGS ===================== */
+const wf = {
+  els:{
+    rid: $('wf_recipe_id'), vs:$('wf_vol_start'),
+    p:$('wf_pressure_psi'), gp:$('wf_glaze_pressure_psi'),
+    t:$('wf_max_temp'), c:$('wf_cooling_profile'), m:$('wf_moisture_pct'),
+    h:$('wf_external_humidity'), af:$('wf_air_flow_top_setting'), ac:$('wf_air_cooling'), th:$('wf_thickness_mm'),
+    pv:$('wf_pressure_val'), gpv:$('wf_glaze_val'), tv:$('wf_temp_val'), cv:$('wf_cool_val'),
+    mv:$('wf_moist_val'), hv:$('wf_hum_val'), afv:$('wf_airflow_val'), acv:$('wf_aircool_val'), thv:$('wf_thick_val'),
+    status:$('wfStatus'), hint:$('wfHint')
+  },
+  charts:{ line:null, tornado:null, hist:null }
+};
+// show slider values live
+[['p','pv'],['gp','gpv'],['t','tv'],['c','cv'],['m','mv'],['h','hv'],['af','afv'],['ac','acv'],['th','thv']]
+.forEach(([k,label])=>{
+  wf.els[k].addEventListener('input',()=>{ wf.els[label].textContent = wf.els[k].value; });
+});
+
+/* ===================== PYODIDE + MODEL ===================== */
+let pyodide=null, modelLoaded=false;
+async function initPyodideAndModel(){
+  try{
+    wf.els.status.textContent='Loading Python…';
+    pyodide = await loadPyodide();
+    try { await pyodide.loadPackage(['numpy','pandas','scikit-learn','joblib']); } catch(e){}
+    const code = `
+import math, numpy as np, pandas as pd, joblib
+bundle=None
+press_model=glaze_model=kiln_model=None
+THRESH_MARGIN=0.03; SORT_MIN=0.90; SORT_DEFAULT=0.90; SORT_MAX=0.92
+
+def load_model(path):
+    global bundle, press_model, glaze_model, kiln_model
+    bundle = joblib.load(path)
+    if isinstance(bundle, dict) and "models" in bundle:
+        press_model = bundle["models"]["press_ratio"]
+        glaze_model = bundle["models"]["glaze_ratio"]
+        kiln_model  = bundle["models"]["kiln_ratio"]
+    else:
+        press_model = bundle["press_ratio"]
+        glaze_model = bundle["glaze_ratio"]
+        kiln_model  = bundle["kiln_ratio"]
+    return True
+
+def predict(payload):
+    d = payload
+    res = { "stages": {
+      "start":{"status":"actual","amount":int(d["vol_start"]), "min_required":None, "ratio":1.0},
+      "press":{"status":"blocked","amount":None,"min_required":None,"ratio":None},
+      "glaze":{"status":"blocked","amount":None,"min_required":None,"ratio":None},
+      "kiln" :{"status":"blocked","amount":None,"min_required":None,"ratio":None},
+      "sort" :{"status":"blocked","amount":None,"min_required":None,"ratio":SORT_DEFAULT}
+    } }
+    start = float(d["vol_start"])
+    df = pd.DataFrame([d])
+    pr = float(press_model.predict(df)[0])
+    gr = float(glaze_model.predict(df)[0])
+    kr = float(kiln_model.predict(df)[0])
+    press_amt = min(start*pr, start)
+    glaze_amt = min(press_amt*gr, press_amt)
+    kiln_amt  = min(glaze_amt*kr, glaze_amt)
+    sort_amt  = kiln_amt * SORT_DEFAULT
+    res["stages"]["press"].update(status="pred", amount=int(round(press_amt)), min_required=int(round(start*max(0,pr-THRESH_MARGIN))), ratio=pr)
+    res["stages"]["glaze"].update(status="pred", amount=int(round(glaze_amt)), min_required=int(round(press_amt*max(0,gr-THRESH_MARGIN))), ratio=gr)
+    res["stages"]["kiln"].update (status="pred", amount=int(round(kiln_amt)),  min_required=int(round(glaze_amt*max(0,kr-THRESH_MARGIN))), ratio=kr)
+    res["stages"]["sort"].update (status="pred", amount=int(round(sort_amt)),  min_required=int(round(kiln_amt*max(SORT_MIN, SORT_DEFAULT-0.02))), ratio=SORT_DEFAULT)
+    return res
+    `;
+    await pyodide.runPythonAsync(code);
+
+    // load model from same folder
+    const resp = await fetch('ml_model.joblib', { cache: 'no-store' });
+    if(!resp.ok) throw new Error('Missing ml_model.joblib');
+    const buf = await resp.arrayBuffer();
+    try { pyodide.FS.mkdir('/tmp',{mode:0o777}); } catch(e){}
+    try { pyodide.FS.unlink('/tmp/ml_model.joblib'); } catch(e){}
+    pyodide.FS.writeFile('/tmp/ml_model.joblib', new Uint8Array(buf));
+    await pyodide.runPythonAsync(`load_model("/tmp/ml_model.joblib")`);
+    modelLoaded=true;
+    wf.els.status.textContent='Model loaded ✅';
+  }catch(e){
+    modelLoaded=false;
+    wf.els.status.textContent='Model unavailable (using heuristic mode)';
+  }
+}
+initPyodideAndModel();
+
+/* ===================== CHARTS ===================== */
+function lineChartFactory(ctx, labelA='Scenario'){
+  return new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: STAGES,
+      datasets: [
+        { label: labelA, data: [], borderWidth:2, tension:0.3, fill:false,
+          borderColor: PB_BLUE, pointBackgroundColor: PB_BLUE, pointRadius:4, pointHoverRadius:6 },
+        { label:'Min', data:[], borderWidth:1.5, borderDash:[6,6], borderColor:'#F4B000', pointRadius:0, tension:0.3, fill:false }
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{ x:{grid:{display:false}}, y:{beginAtZero:true, grid:{color:PB_GRAY_L}} },
+      plugins:{ legend:{display:true} }
+    }
+  });
+}
+wf.charts.line    = lineChartFactory($('wfLine').getContext('2d'));
+wf.charts.tornado = new Chart($('wfTornado').getContext('2d'), {
+  type:'bar',
+  data:{ labels:['pressure_psi','glaze_pressure_psi','max_temp'], datasets:[{label:'Δ Final (% of Start)', data:[], backgroundColor:'#7C8390'}] },
+  options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+    scales:{ x:{ ticks:{ callback:v=> (typeof v==='number'? v.toFixed(0):v) + '%' } } }, plugins:{legend:{display:false}} }
+});
+wf.charts.hist = new Chart($('wfHist').getContext('2d'), {
+  type:'bar',
+  data:{ labels:[], datasets:[{ label:'Count', data:[], backgroundColor:'#94A3B8' }] },
+  options:{ responsive:true, maintainAspectRatio:false,
+    scales:{ x:{ grid:{display:false} }, y:{ beginAtZero:true } }, plugins:{legend:{display:false}} }
+});
+
+/* ===================== RUNNERS ===================== */
+function wfPayload(){
+  return {
+    recipe_id: toNum(wf.els.rid.value),
+    vol_start: toNum(wf.els.vs.value),
+    pressure_psi: toNum(wf.els.p.value),
+    glaze_pressure_psi: toNum(wf.els.gp.value),
+    max_temp: toNum(wf.els.t.value),
+    cooling_profile: toNum(wf.els.c.value),
+    moisture_pct: toNum(wf.els.m.value),
+    external_humidity: toNum(wf.els.h.value),
+    air_flow_top_setting: toNum(wf.els.af.value),
+    air_cooling: toNum(wf.els.ac.value),
+    thickness_mm: toNum(wf.els.th.value),
+    vol_press_out: null, vol_glaze_out: null, vol_kiln_out: null
+  };
+}
+
+// Heuristic fallback if model isn't available
+function heuristicPredict(payload){
+  const start = payload.vol_start;
+  const pr = Math.min(0.996, 0.985 + (payload.pressure_psi-2500)*0.000004); // ~0.985-0.996
+  const gr = Math.min(0.996, 0.986 + (payload.glaze_pressure_psi-1200)*0.000006);
+  const kilnAdj = (
+    (payload.max_temp-1196)*(-0.0015) +
+    (payload.mixture_pct?0:0) +
+    (5.2 - payload.cooling_profile)*0.004 +
+    (payload.moisture_pct-6.0)*(-0.006) +
+    (payload.external_humidity-50)*(-0.0008) +
+    (payload.air_flow_top_setting-6.0)*(0.002) +
+    (payload.air_cooling-5.0)*(0.001)
+  );
+  const kr = Math.max(0.94, Math.min(0.975, 0.965 + kilnAdj));
+  const press_amt = Math.min(start*pr, start);
+  const glaze_amt = Math.min(press_amt*gr, press_amt);
+  const kiln_amt  = Math.min(glaze_amt*kr, glaze_amt);
+  const sort_ratio = 0.90;
+  const sort_amt  = kiln_amt * sort_ratio;
+
+  return { stages:{
+    start:{status:'actual', amount:Math.round(start), min_required:null, ratio:1},
+    press:{status:'pred',   amount:Math.round(press_amt), min_required:Math.round(start*(pr-0.03)), ratio:pr},
+    glaze:{status:'pred',   amount:Math.round(glaze_amt), min_required:Math.round(press_amt*(gr-0.03)), ratio:gr},
+    kiln :{status:'pred',   amount:Math.round(kiln_amt),  min_required:Math.round(glaze_amt*(kr-0.03)), ratio:kr},
+    sort :{status:'pred',   amount:Math.round(sort_amt),  min_required:Math.round(kiln_amt*Math.max(0.88, sort_ratio-0.02)), ratio:sort_ratio},
+  }};
+}
+
+async function runWFOnce(payload){
+  if(modelLoaded){
+    try{
+      const pyPredict = pyodide.globals.get('predict');
+      const pyPayload = pyodide.toPy(payload);
+      const pyOut = pyPredict(pyPayload);
+      const resObj = pyOut.toJs({ dict_converter: Object.fromEntries });
+      pyPayload.destroy(); pyOut.destroy(); pyPredict.destroy();
+      return resObj;
+    }catch(e){ /* fall back */ }
+  }
+  return heuristicPredict(payload);
+}
+
+async function runWF(){
+  const payload = wfPayload();
+  if(!payload.vol_start){ wf.els.hint.textContent='Enter a Start volume.'; return; }
+  const res = await runWFOnce(payload);
+  const s = res.stages;
+  const vols=[s.start.amount,s.press.amount,s.glaze.amount,s.kiln.amount,s.sort.amount];
+  const mins=[s.start.min_required,s.press.min_required,s.glaze.min_required,s.kiln.min_required,s.sort.min_required];
+
+  wf.charts.line.data.datasets[0].data = vols;
+  wf.charts.line.data.datasets[1].data = mins;
+  wf.charts.line.update();
+
+  const yieldPct = (vols[4]/vols[0])*100;
+  wf.els.hint.textContent = `Final yield ≈ ${isFinite(yieldPct)?yieldPct.toFixed(2):'–'}%`;
+}
+$('wfRun').addEventListener('click', runWF);
+
+// Sensitivity ±5%
+$('wfSens').addEventListener('click', async ()=>{
+  const base = wfPayload();
+  if(!base.vol_start) return;
+  const baseRes = await runWFOnce(base);
+  const baseY = baseRes.stages.sort.amount;
+
+  const keys = ['pressure_psi','glaze_pressure_psi','max_temp'];
+  const deltas = [];
+  for(const k of keys){
+    const up = {...base}; up[k] = base[k]*1.05;
+    const dn = {...base}; dn[k] = base[k]*0.95;
+    const upY = (await runWFOnce(up)).stages.sort.amount;
+    const dnY = (await runWFOnce(dn)).stages.sort.amount;
+    const worst = Math.max(Math.abs(upY-baseY), Math.abs(dnY-baseY));
+    deltas.push( (worst/ (base.vol_start||1)) * 100 ); // Δ% of start
+  }
+  wf.charts.tornado.data.labels = keys;
+  wf.charts.tornado.data.datasets[0].data = deltas.map(v=>Number(v.toFixed(2)));
+  wf.charts.tornado.update();
+});
+
+// Monte Carlo (200)
+$('wfMC').addEventListener('click', async ()=>{
+  const base = wfPayload();
+  if(!base.vol_start) return;
+  const N=200, vals=[];
+  for(let i=0;i<N;i++){
+    const p = {
+      ...base,
+      pressure_psi: base.pressure_psi * (1 + (Math.random()-0.5)*0.06),   // ±3%
+      glaze_pressure_psi: base.glaze_pressure_psi * (1 + (Math.random()-0.5)*0.06),
+      max_temp: base.max_temp + (Math.random()-0.5)*2
+    };
+    const y = (await runWFOnce(p)).stages.sort.amount / base.vol_start * 100;
+    vals.push(y);
+  }
+  const bins=12, min=Math.min(...vals), max=Math.max(...vals), bw=(max-min)/bins || 1;
+  const counts=Array(bins).fill(0), labels=[];
+  for(let i=0;i<bins;i++){ labels.push((min + i*bw).toFixed(1)); }
+  vals.forEach(v=>{ const idx=Math.min(bins-1, Math.max(0, Math.floor((v-min)/bw))); counts[idx]++; });
+  wf.charts.hist.data.labels = labels;
+  wf.charts.hist.data.datasets[0].data = counts;
+  wf.charts.hist.update();
+});
+
+// Initial quick run so the chart isn't empty
+runWF();
+</script>
+</body>
+</html>
