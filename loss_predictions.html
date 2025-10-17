@@ -41,6 +41,7 @@
   <!-- HEADER -->
   <header class="bg-gradient-to-r from-pbGrayLight via-pbGrayMid/80 to-pbBlue">
     <div class="relative w-full py-5 pl-3 flex items-center">
+      <!-- Left: Logo with tiny left padding -->
       <a href="/" class="shrink-0">
         <img
           src="assets/images/logo_portobello_america_CORES_pantone_655.png"
@@ -48,9 +49,15 @@
           class="h-16 w-auto object-contain block"
         />
       </a>
-      <h1 class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none">
+
+      <!-- Center: Title (stays perfectly centered regardless of logo width) -->
+      <h1
+        class="absolute left-1/2 -translate-x-1/2 text-white text-xl md:text-2xl lg:text-4xl font-semibold tracking-tight text-center pointer-events-none"
+      >
         Tile Material Dashboard
       </h1>
+
+      <!-- Right: Spacer for symmetry / future actions -->
       <div class="ml-auto"></div>
     </div>
   </header>
@@ -71,8 +78,6 @@
               <div>
                 <h3 class="text-lg font-semibold text-slate-800">Model & Inputs</h3>
                 <p id="statusText" class="text-sm text-slate-500 mt-1">Booting Python…</p>
-                <!-- NEW: final yield readout -->
-                <p id="finalYield" class="text-sm text-slate-700 mt-1"></p>
                 <details class="mt-2 text-xs text-slate-500">
                   <summary class="cursor-pointer select-none">Debug</summary>
                   <pre id="debugLog" class="mt-2 bg-slate-50 border rounded p-2 whitespace-pre-wrap"></pre>
@@ -96,8 +101,7 @@
               <div class="flex items-center gap-2 text-xs text-slate-500">
                 <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Actual</span>
                 <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#F4B000"></span> Predicted</span>
-                <!-- UPDATED: threshold legend chip in orange -->
-                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#F97316"></span> Threshold (dashed)</span>
+                <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
               </div>
             </div>
 
@@ -109,7 +113,8 @@
                   <h4 class="font-semibold">Start</h4>
                   <span id="badgeStart" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
                 </div>
-
+                <label class="block text-sm mb-1">Datetime</label>
+                <input id="datetime" type="datetime-local" class="w-full border rounded p-2 mb-2" />
                 <label class="block text-sm mb-1">Recipe ID</label>
                 <select id="recipe_id" class="w-full border rounded p-2 mb-2 bg-white">
                   <option value="">Choose…</option>
@@ -119,75 +124,79 @@
                   <option value="246">246</option>
                   <option value="247">247</option>
                 </select>
-
+                <label class="block text-sm mb-1">Gloss Type</label>
+                <input id="gloss_type" type="text" class="w-full border rounded p-2 mb-2" placeholder="e.g. shiny, matte" />
+                <label class="block text-sm mb-1">Gloss Amount Target (g/tile)</label>
+                <input id="gloss_amount_target_g_per_tile" type="number" class="w-full border rounded p-2 mb-2" />
                 <label class="block text-sm mb-1">Start Volume</label>
                 <input id="vol_start" type="number" class="w-full border rounded p-2" placeholder="required" />
               </div>
-
               <!-- PRESS -->
               <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
                 <div class="flex items-center justify-between mb-2">
                   <h4 class="font-semibold">Press</h4>
                   <span id="badgePress" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
                 </div>
-                <label class="block text-sm mb-1">Press Pressure (psi)</label>
-                <input id="pressure_psi" type="number" class="w-full border rounded p-2 mb-2" placeholder="model input" />
                 <label class="block text-sm mb-1">Press Output (actual, optional)</label>
-                <input id="vol_press_out" type="number" class="w-full border rounded p-2" placeholder="if known, overrides model" />
+                <input id="vol_press_out" type="number" class="w-full border rounded p-2 mb-2" placeholder="if known, overrides model" />
+                <label class="block text-sm mb-1">Target Pressure</label>
+                <input id="target_pressure" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Actual Pressure</label>
+                <input id="actual_pressure" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Layers Tossed</label>
+                <input id="layers_tossed" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Desired Thickness</label>
+                <input id="desired_thickness" type="number" class="w-full border rounded p-2 mb-2" />
               </div>
-
               <!-- GLAZE -->
               <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
                 <div class="flex items-center justify-between mb-2">
                   <h4 class="font-semibold">Glaze</h4>
                   <span id="badgeGlaze" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
                 </div>
-                <label class="block text-sm mb-1">Glaze Pressure (psi)</label>
-                <input id="glaze_pressure_psi" type="number" class="w-full border rounded p-2 mb-2" placeholder="model input (or leave blank)" />
                 <label class="block text-sm mb-1">Glaze Output (actual, optional)</label>
-                <input id="vol_glaze_out" type="number" class="w-full border rounded p-2" placeholder="if known, overrides model" />
+                <input id="vol_glaze_out" type="number" class="w-full border rounded p-2 mb-2" placeholder="if known, overrides model" />
+                <label class="block text-sm mb-1">Recipe Air Cooling</label>
+                <input id="recipe_air_cooling" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Recipe Moisture</label>
+                <input id="recipe_moisture" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Recipe Air Flow</label>
+                <input id="recipe_air_flow" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Recipe Max Temp</label>
+                <input id="recipe_max_temp" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Recipe Humidity</label>
+                <input id="recipe_humidity" type="number" class="w-full border rounded p-2 mb-2" />
               </div>
-
               <!-- KILN -->
               <div class="col-span-12 md:col-span-3 rounded-xl border p-3">
                 <div class="flex items-center justify-between mb-2">
                   <h4 class="font-semibold">Kiln</h4>
                   <span id="badgeKiln" class="text-xs px-2 py-0.5 rounded bg-slate-100">blocked</span>
                 </div>
-                <div class="grid grid-cols-2 gap-2">
-                  <div>
-                    <label class="block text-xs mb-1">Max Temp</label>
-                    <input id="max_temp" type="number" class="w-full border rounded p-2" />
-                  </div>
-                  <div>
-                    <label class="block text-xs mb-1">Cooling</label>
-                    <input id="cooling_profile" type="number" class="w-full border rounded p-2" />
-                  </div>
-                  <div>
-                    <label class="block text-xs mb-1">Moisture %</label>
-                    <input id="moisture_pct" type="number" class="w-full border rounded p-2" />
-                  </div>
-                  <div>
-                    <label class="block text-xs mb-1">Humidity %</label>
-                    <input id="external_humidity" type="number" class="w-full border rounded p-2" />
-                  </div>
-                  <div>
-                    <label class="block text-xs mb-1">Air Flow</label>
-                    <input id="air_flow_top_setting" type="number" class="w-full border rounded p-2" />
-                  </div>
-                  <div>
-                    <label class="block text-xs mb-1">Air Cooling</label>
-                    <input id="air_cooling" type="number" class="w-full border rounded p-2" />
-                  </div>
-                  <div>
-                    <label class="block text-xs mb-1">Thickness (mm)</label>
-                    <input id="thickness_mm" type="number" class="w-full border rounded p-2" />
-                  </div>
-                  <div>
-                    <label class="block text-xs mb-1">Kiln Output (actual, optional)</label>
-                    <input id="vol_kiln_out" type="number" class="w-full border rounded p-2" />
-                  </div>
-                </div>
+                <label class="block text-sm mb-1">Kiln Output (actual, optional)</label>
+                <input id="vol_kiln_out" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Kiln Air Cooling</label>
+                <input id="kiln_air_cooling" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Kiln Moisture</label>
+                <input id="kiln_moisture" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Kiln Air Flow</label>
+                <input id="kiln_air_flow" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Kiln Max Temp</label>
+                <input id="kiln_max_temp" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Kiln Humidity</label>
+                <input id="kiln_humidity" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Delta Air Cooling</label>
+                <input id="delta_air_cooling" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Delta Moisture</label>
+                <input id="delta_moisture" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Delta Air Flow</label>
+                <input id="delta_air_flow" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Delta Max Temp</label>
+                <input id="delta_max_temp" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Delta Humidity</label>
+                <input id="delta_humidity" type="number" class="w-full border rounded p-2 mb-2" />
+                <label class="block text-sm mb-1">Sort Output (optional)</label>
+                <input id="vol_sort_out" type="number" class="w-full border rounded p-2 mb-2" />
               </div>
             </div>
           </section>
@@ -200,8 +209,7 @@
                 <div class="flex items-center gap-3 text-xs text-slate-500">
                   <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#16A34A"></span> Actual</span>
                   <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm" style="background:#F4B000"></span> Predicted</span>
-                  <!-- UPDATED legend chip color to orange -->
-                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#F97316"></span> Threshold (dashed)</span>
+                  <span class="inline-flex items-center gap-1"><span class="w-3 h-3 inline-block rounded-sm border border-slate-400" style="background:#fff"></span> Min (dashed)</span>
                 </div>
               </div>
               <canvas id="lossLineChart" class="w-full h-full"></canvas>
@@ -240,9 +248,12 @@
   function setActiveTab(nameRaw){
     const name = (nameRaw || 'predictions').toLowerCase();
     const panel = panels[name] || panels['predictions'];
+
+    // show/hide panels
     Object.values(panels).forEach(p => p && p.classList.add('hidden'));
     if (panel) panel.classList.remove('hidden');
 
+    // button styles
     tabButtons.forEach(btn => {
       const isActive = (btn.dataset.tab || '').toLowerCase() === name;
       btn.className = 'tablink flex items-center px-5 py-3 rounded-r-full mb-2 transition ' +
@@ -257,8 +268,7 @@
 
   // ---------- Colors / Chart defaults ----------
   const PB_GRAY_D = '#434A52', PB_GRAY_L='#CFD3DA';
-  const ACTUAL = '#16A34A', PRED='#F4B000', FUTURE='#0B1F52', DANGER='#DC2626';
-  const THRESH = '#F97316'; // NEW: orange threshold line
+  const ACTUAL = '#16A34A', PRED='#F4B000', FUTURE='#0B1F52';
   const STAGES = ['Start','Press','Glaze','Kiln','Sort'];
 
   Chart.defaults.font.family = 'Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
@@ -267,11 +277,36 @@
 
   // Helpers
   const $ = id => document.getElementById(id);
+  // Updated fields for new model schema
   const fields = [
-    'recipe_id','vol_start','pressure_psi','glaze_pressure_psi',
-    'max_temp','cooling_profile','moisture_pct','external_humidity',
-    'air_flow_top_setting','air_cooling','thickness_mm',
-    'vol_press_out','vol_glaze_out','vol_kiln_out'
+    'datetime',
+    'recipe_id',
+    'gloss_type',
+    'gloss_amount_target_g_per_tile',
+    'vol_start',
+    'vol_press_out',
+    'vol_glaze_out',
+    'vol_kiln_out',
+    'vol_sort_out',
+    'target_pressure',
+    'actual_pressure',
+    'layers_tossed',
+    'desired_thickness',
+    'recipe_air_cooling',
+    'recipe_moisture',
+    'recipe_air_flow',
+    'recipe_max_temp',
+    'recipe_humidity',
+    'kiln_air_cooling',
+    'kiln_moisture',
+    'kiln_air_flow',
+    'kiln_max_temp',
+    'kiln_humidity',
+    'delta_air_cooling',
+    'delta_moisture',
+    'delta_air_flow',
+    'delta_max_temp',
+    'delta_humidity'
   ];
   function setVal(id,v){
     const el = $(id);
@@ -288,16 +323,11 @@
     el.scrollTop = el.scrollHeight;
   }
 
-  // ----- Line chart with tooltips (value + loss vs Start + threshold) -----
+  // ----- Line chart with tooltips (value + loss vs Start + min) -----
   let stageStatus = ['future','future','future','future','future'];
-  let lastVols    = [null,null,null,null,null];
-  let lastMins    = [null,null,null,null,null];
-  let sortFlagBelowMin = false; // set when Sort < 90% of Kiln
-
-  function colorFor(i){
-    if (i === 4 && sortFlagBelowMin) return DANGER; // Sort point red if flagged
-    return stageStatus[i]==='actual' ? ACTUAL : (stageStatus[i]==='pred' ? PRED : FUTURE);
-  }
+  let lastVols = [null,null,null,null,null];
+  let lastMins = [null,null,null,null,null];
+  function colorFor(i){ return stageStatus[i]==='actual'?ACTUAL:(stageStatus[i]==='pred'?PRED:FUTURE); }
   const fmt = n => (n==null||!isFinite(n)) ? '-' : n.toLocaleString();
 
   const lossLineChart = new Chart(document.getElementById('lossLineChart'), {
@@ -305,26 +335,19 @@
     data:{
       labels: STAGES,
       datasets:[
-        { // Volume (actual/predicted over stages)
+        { // Volume
           label:'Volume',
           data:[null,null,null,null,null],
           borderWidth:2, tension:0.3, fill:false,
           segment:{ borderColor:(ctx)=>colorFor(ctx.p0DataIndex) },
           pointBackgroundColor:(ctx)=>colorFor(ctx.dataIndex),
-          pointBorderColor:(ctx)=>colorFor(ctx.dataIndex),
           pointRadius:4, pointHoverRadius:6
         },
-        { // Threshold (dashed, orange, with hoverable points)
-          label:'Threshold',
+        { // Min Required (dashed)
+          label:'Min Required',
           data:[null,null,null,null,null],
           borderWidth:1.5, borderDash:[6,6],
-          borderColor:THRESH,
-          pointBackgroundColor:THRESH,
-          pointBorderColor:THRESH,
-          pointRadius:3,
-          pointHoverRadius:6,
-          hitRadius:8,
-          tension:0.3, fill:false
+          borderColor:PRED, pointRadius:0, tension:0.3, fill:false
         }
       ]
     },
@@ -332,54 +355,37 @@
       responsive:true, maintainAspectRatio:false,
       scales:{
         x:{ grid:{ display:false } },
-        y:{ beginAtZero:true, grid:{ color:PB_GRAY_L } }
+        y:{ beginAtZero:true, grid:{ color:PB_GRAY_L } }  // start at 0
       },
       plugins:{
         tooltip:{
-          mode:'index',
-          intersect:false,
           callbacks:{
             title:(items)=>{
               const i = items[0].dataIndex;
               return `Stage ${i+1} — ${STAGES[i]}`;
             },
             label:(item)=>{
-              const label = item.dataset.label || 'Value';
-              const val = item.parsed.y;
-              if(val==null || !isFinite(val)) return `${label}: —`;
-              // Add (Actual/Predicted) status only for the Volume series
-              if (item.datasetIndex === 0) {
-                const s = stageStatus[item.dataIndex]==='actual' ? 'Actual'
-                        : stageStatus[item.dataIndex]==='pred'   ? 'Predicted'
-                        : 'Future';
-                return `${label}: ${fmt(val)} ft² (${s})`;
-              }
-              return `${label}: ${fmt(val)} ft²`;
+              const i = item.dataIndex;
+              const val = lastVols[i];
+              const status = stageStatus[i]==='actual' ? 'Actual'
+                            : stageStatus[i]==='pred'   ? 'Predicted'
+                            : 'Future';
+              if(val==null) return 'No data';
+              return `Value: ${fmt(val)} ft² (${status})`;
             },
             afterLabel:(item)=>{
               const i = item.dataIndex;
               const start = lastVols[0];
-              const val   = item.parsed.y;
+              const val   = lastVols[i];
               const minV  = lastMins[i];
-              const lines = [];
-              if(item.datasetIndex === 0){
-                if(start!=null && isFinite(start) && val!=null && isFinite(val)){
-                  const loss  = Math.max(0, start - val);
-                  const pct   = start>0 ? (loss/start*100) : 0;
-                  lines.push(`Loss vs Start: ${fmt(loss)} ft² (${pct.toFixed(2)}%)`);
-                }
-                if(minV!=null && isFinite(minV)){
-                  lines.push(`Threshold: ${fmt(minV)} ft²`);
-                }
-                if (i === 4 && lastVols[3] != null) {
-                  const ratio = lastVols[3] > 0 ? (val / lastVols[3]) * 100 : 0;
-                  const badge = sortFlagBelowMin ? ' ⚠️ < 90% MIN' : '';
-                  lines.push(`Sort vs Kiln: ${ratio.toFixed(2)}%${badge}`);
-                }
-              }else if(item.datasetIndex === 1){
-                lines.push('Policy: predicted must be ≥ threshold.');
+              if(start==null || val==null) return '';
+              const loss  = Math.max(0, start - val);
+              const pct   = start>0 ? (loss/start*100) : 0;
+              const lines = [`Loss vs Start: ${fmt(loss)} ft² (${pct.toFixed(2)}%)`];
+              if(minV!=null && stageStatus[i]==='pred'){
+                lines.push(`Min Required: ${fmt(minV)} ft²`);
               }
-              return lines.length ? '\n' + lines.join('\n') : '';
+              return '\n' + lines.join('\n');
             }
           }
         }
@@ -406,8 +412,7 @@
                : st==='pred'   ? 'bg-amber-100 text-amber-700'
                : 'bg-slate-100 text-slate-600';
       const el = document.getElementById(id);
-      el.textContent = txt;
-      el.className = `text-xs px-2 py-0.5 rounded ${cls}`;
+      el.textContent = txt; el.className = `text-xs px-2 py-0.5 rounded ${cls}`;
     });
   }
 
@@ -415,7 +420,6 @@
     fields.forEach(f=> setVal(f,''));
     updateChart([null,null,null,null,null],[null,null,null,null,null],['future','future','future','future','future']);
     setBadges();
-    $('finalYield').textContent='';
     $('inputHint').textContent='Enter Start → add actuals or inputs to unlock predictions.';
   }
 
@@ -563,21 +567,11 @@ def predict(payload):
         res["stages"]["kiln"].update(status="pred", amount=_round0(kiln_amt), min_required=_round0(min_req), ratio=kr)
         kiln_base = kiln_amt
 
-    # SORT (rule + flag if < 90% of previous stage)
+    # SORT (rule)
     sr = float(SORT_DEFAULT)
     sort_amt = min(kiln_base * sr, kiln_base)
     min_req = kiln_base * max(SORT_MIN, sr - 0.02)
-    actual_ratio_vs_prev = None if kiln_base == 0 else (sort_amt / kiln_base)
-    flag_below_min = bool(kiln_base > 0 and actual_ratio_vs_prev < SORT_MIN)
-    res["stages"]["sort"].update(
-        status="pred",
-        amount=_round0(sort_amt),
-        min_required=_round0(min_req),
-        ratio=sr,
-        min_ratio=SORT_MIN,
-        actual_ratio_vs_prev=actual_ratio_vs_prev,
-        flag_below_min=flag_below_min
-    )
+    res["stages"]["sort"].update(status="pred", amount=_round0(sort_amt), min_required=_round0(min_req), ratio=sr)
     return res
       `;
       await pyodide.runPythonAsync(pyCode);
@@ -603,9 +597,6 @@ def predict(payload):
       modelLoaded = true;
       $('statusText').textContent = 'Model loaded ✅ (ml_model.joblib)';
       logDebug('Model loaded from '+MODEL_URL);
-
-      // Auto-run prediction now that the model is ready
-      predictNow();
     }catch(e){
       modelLoaded = false;
       $('statusText').textContent = 'Could not load ml_model.joblib. Place it next to this HTML and open via http(s).';
@@ -616,18 +607,32 @@ def predict(payload):
   async function predictNow(){
     if(!modelLoaded){ $('statusText').textContent = 'Model not loaded.'; return; }
 
-    const payload = Object.fromEntries(
-      [
-        'recipe_id','vol_start','pressure_psi','glaze_pressure_psi',
-        'max_temp','cooling_profile','moisture_pct','external_humidity',
-        'air_flow_top_setting','air_cooling','thickness_mm',
-        'vol_press_out','vol_glaze_out','vol_kiln_out'
-      ].map(k => {
-        const el = $(k);
-        const raw = el.tagName==='SELECT' ? el.value : el.value;
-        return [k, (raw===''?null:Number(raw))];
-      })
-    );
+    // Dynamically collect all field values, convert numbers, leave strings as-is
+    const payload = {};
+    fields.forEach(k => {
+      const el = $(k);
+      if (!el) { payload[k] = null; return; }
+      let val = el.value;
+      if (val === '') { payload[k] = null; return; }
+      // Determine if field should be numeric
+      // If input type is number, or id starts with 'vol_' or is a known numeric field
+      if (
+        el.type === 'number' ||
+        [
+          'gloss_amount_target_g_per_tile',
+          'vol_start','vol_press_out','vol_glaze_out','vol_kiln_out','vol_sort_out',
+          'target_pressure','actual_pressure','layers_tossed','desired_thickness',
+          'recipe_air_cooling','recipe_moisture','recipe_air_flow','recipe_max_temp','recipe_humidity',
+          'kiln_air_cooling','kiln_moisture','kiln_air_flow','kiln_max_temp','kiln_humidity',
+          'delta_air_cooling','delta_moisture','delta_air_flow','delta_max_temp','delta_humidity'
+        ].includes(k)
+      ) {
+        const n = Number(val);
+        payload[k] = isNaN(n) ? null : n;
+      } else {
+        payload[k] = val;
+      }
+    });
 
     let resObj;
     try{
@@ -649,99 +654,128 @@ def predict(payload):
       const s = d[k].status; return s==='blocked'?'future':(s==='actual'?'actual':'pred');
     });
 
-    // Sort flag from Python
-    sortFlagBelowMin = !!d.sort.flag_below_min;
-
     setBadges([statuses[0],statuses[1],statuses[2],statuses[3]]);
     updateChart(vols, mins, statuses);
 
-    // Final yield readout (percent + amount)
-    const start = vols[0], final = vols[4];
-    const pct = (start && final) ? (final/start*100) : NaN;
-    $('finalYield').textContent =
-      (isFinite(pct) && isFinite(final) && isFinite(start))
-      ? `Final yield ≈ ${pct.toFixed(2)}% (${final.toLocaleString()} ft² of ${start.toLocaleString()} ft²)`
-      : '';
-
     const hints=[];
-    if(statuses[1]==='future') hints.push('Press needs pressure_psi or actual Press output.');
-    if(statuses[2]==='future') hints.push('Glaze needs glaze_pressure_psi (or pressure_psi) or actual Glaze output.');
-    if(statuses[3]==='future') hints.push('Kiln benefits from temp/cooling/moisture/humidity/air settings — but will impute if missing.');
-
-    if (sortFlagBelowMin) {
-      $('statusText').textContent = '⚠️ Sort yield below 90% of Kiln — flagged.';
-    } else {
-      $('statusText').textContent = 'Done.';
-    }
+    if(statuses[1]==='future') hints.push('Press needs target_pressure and/or actual Press output.');
+    if(statuses[2]==='future') hints.push('Glaze needs recipe_air_cooling/moisture/air_flow or actual Glaze output.');
+    if(statuses[3]==='future') hints.push('Kiln benefits from kiln temp/cooling/moisture/humidity/air settings — but will impute if missing.');
     $('inputHint').textContent = hints.join(' ');
+    $('statusText').textContent = 'Done.';
   }
 
   // ---------- Example: random stage, only fill up to that stage ----------
   function randInt(a,b){ return Math.floor(Math.random()*(b-a+1))+a; }
   function randFloat(a,b){ return a + Math.random()*(b-a); }
 
-  const SETPOINTS = {
-    241:{max_temp:1197, cooling_profile:5.2, moisture_pct:6.0, external_humidity:50, air_flow_top_setting:6.0, air_cooling:5.0, thickness_mm:8.5},
-    244:{max_temp:1195, cooling_profile:5.0, moisture_pct:6.0, external_humidity:48, air_flow_top_setting:5.8, air_cooling:5.1, thickness_mm:8.5},
-    245:{max_temp:1196, cooling_profile:5.3, moisture_pct:6.0, external_humidity:52, air_flow_top_setting:6.2, air_cooling:4.9, thickness_mm:8.5},
-    246:{max_temp:1194, cooling_profile:4.9, moisture_pct:6.0, external_humidity:47, air_flow_top_setting:5.7, air_cooling:5.2, thickness_mm:8.5},
-    247:{max_temp:1198, cooling_profile:5.1, moisture_pct:6.0, external_humidity:49, air_flow_top_setting:6.1, air_cooling:5.0, thickness_mm:8.5}
-  };
-
   function clearAll(){
-    ['pressure_psi','glaze_pressure_psi','max_temp','cooling_profile','moisture_pct','external_humidity','air_flow_top_setting','air_cooling','thickness_mm','vol_press_out','vol_glaze_out','vol_kiln_out'].forEach(id=>setVal(id,''));
+    fields.forEach(id=>setVal(id,''));
   }
 
   function loadExample(){
+    // Always ensure Start section is populated and not reset after
+    // random recipe id from dropdown
     const ids = [241,244,245,246,247];
     const rid = ids[Math.floor(Math.random()*ids.length)];
-    setVal('recipe_id', rid);
-
+    // random stage: 0 Start only, 1 Up to Press, 2 Up to Glaze, 3 Up to Kiln
     const stageIdx = Math.floor(Math.random()*4);
-
+    // base start volume
     const start = randInt(56000, 90000);
+
+    // Example datetime in "mm/dd/yyyy, --:-- --" locale-friendly format
+    const dt = new Date(Date.now() - randInt(0, 7*24*60*60*1000));
+    // Format as mm/dd/yyyy, hh:mm AM/PM
+    function formatDateLocal(dt) {
+      // Using en-US for mm/dd/yyyy, 12-hour
+      return dt.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+    // Set Start section required fields first
+    setVal('datetime', dt.toISOString().slice(0,16)); // set input, but will show as local in field
+    setVal('recipe_id', rid);
+    setVal('gloss_type', ['shiny','matte','satin'][randInt(0,2)]);
+    setVal('gloss_amount_target_g_per_tile', randFloat(10, 25).toFixed(1));
     setVal('vol_start', start);
 
-    clearAll();
+    // Now clear all other fields except Start section
+    // Only clear fields that are NOT Start section
+    const startFields = [
+      'datetime', 'recipe_id', 'gloss_type', 'gloss_amount_target_g_per_tile', 'vol_start'
+    ];
+    fields.forEach(id => {
+      if (!startFields.includes(id)) setVal(id, '');
+    });
 
+    // Optional inputs and "actuals" up to the chosen stage
     if(stageIdx >= 1){
-      setVal('pressure_psi', Math.round(randFloat(3000, 3200)));
+      setVal('vol_press_out', Math.round(start * randFloat(0.987, 0.994)));
+      setVal('target_pressure', Math.round(randFloat(3000, 3200)));
+      setVal('actual_pressure', Math.round(randFloat(2950, 3250)));
+      setVal('layers_tossed', randInt(0, 2));
+      setVal('desired_thickness', randFloat(7.5, 8.5).toFixed(2));
     }
     if(stageIdx >= 2){
-      setVal('glaze_pressure_psi', Math.round(randFloat(1400, 1700)));
+      setVal('vol_glaze_out', Math.round(Number($('vol_press_out').value) * randFloat(0.988, 0.993)));
+      setVal('recipe_air_cooling', randFloat(4.5, 5.5).toFixed(2));
+      setVal('recipe_moisture', randFloat(5.8, 6.2).toFixed(2));
+      setVal('recipe_air_flow', randFloat(5.5, 6.5).toFixed(2));
+      setVal('recipe_max_temp', randInt(1190, 1200));
+      setVal('recipe_humidity', randInt(45, 55));
     }
     if(stageIdx >= 3){
-      const sp = SETPOINTS[rid];
-      setVal('max_temp', Math.round(sp.max_temp + randFloat(-2, 2)));
-      setVal('cooling_profile', (sp.cooling_profile + randFloat(-0.2, 0.2)).toFixed(1));
-      setVal('moisture_pct', (sp.moisture_pct + randFloat(-0.4, 0.4)).toFixed(1));
-      setVal('external_humidity', Math.round(sp.external_humidity + randFloat(-3, 3)));
-      setVal('air_flow_top_setting', (sp.air_flow_top_setting + randFloat(-0.3, 0.3)).toFixed(1));
-      setVal('air_cooling', (sp.air_cooling + randFloat(-0.3, 0.3)).toFixed(1));
-      setVal('thickness_mm', sp.thickness_mm);
+      setVal('vol_kiln_out', Math.round(Number($('vol_glaze_out').value) * randFloat(0.958, 0.969)));
+      setVal('kiln_air_cooling', randFloat(4.5, 5.5).toFixed(2));
+      setVal('kiln_moisture', randFloat(5.8, 6.2).toFixed(2));
+      setVal('kiln_air_flow', randFloat(5.5, 6.5).toFixed(2));
+      setVal('kiln_max_temp', randInt(1190, 1200));
+      setVal('kiln_humidity', randInt(45, 55));
+      setVal('delta_air_cooling', randFloat(-0.5, 0.5).toFixed(2));
+      setVal('delta_moisture', randFloat(-0.2, 0.2).toFixed(2));
+      setVal('delta_air_flow', randFloat(-0.3, 0.3).toFixed(2));
+      setVal('delta_max_temp', randFloat(-2, 2).toFixed(2));
+      setVal('delta_humidity', randFloat(-5, 5).toFixed(2));
+      setVal('vol_sort_out', Math.round(Number($('vol_kiln_out').value) * randFloat(0.89, 0.92)));
     }
 
-    const press_out = Math.round(start * randFloat(0.987, 0.994));
-    const glaze_out = Math.round(press_out * randFloat(0.988, 0.993));
-    const kiln_out  = Math.round(glaze_out * randFloat(0.958, 0.969));
+    // Always set Start badge and ensure blocked status if not predicted yet
+    setBadges(['blocked','blocked','blocked','blocked']);
 
-    if(stageIdx >= 1) setVal('vol_press_out', press_out);
-    if(stageIdx >= 2) setVal('vol_glaze_out', glaze_out);
-    if(stageIdx >= 3) setVal('vol_kiln_out',  kiln_out);
-
+    // Show the Start datetime in a locale-friendly way in the status if desired
     const labels = ['Start only','Up to Press','Up to Glaze','Up to Kiln'];
-    $('statusText').textContent = `Example loaded: ${labels[stageIdx]} (ID ${rid}). Predicting…`;
+    $('statusText').textContent = `Example loaded: ${labels[stageIdx]} (ID ${rid}, Start ${formatDateLocal(dt)}). Click Predict.`;
   }
 
   // Events
   document.getElementById('btnPredict').addEventListener('click', predictNow);
   document.getElementById('btnReset').addEventListener('click', resetAll);
-  document.getElementById('btnExample').addEventListener('click', () => { loadExample(); if (modelLoaded) predictNow(); });
+  document.getElementById('btnExample').addEventListener('click', loadExample);
 
-  // Boot: reset, auto-fill an example, then init Python; autoLoadModel() will auto-predict
+  // Boot
   resetAll();
-  loadExample();
   initPy();
+
+  // once python and model load, auto-run example + predict
+  window.addEventListener('load', async () => {
+    // wait briefly to ensure Pyodide and model finish loading
+    let checkCount = 0;
+    const waitForModel = setInterval(() => {
+      if (typeof modelLoaded !== 'undefined' && modelLoaded) {
+        clearInterval(waitForModel);
+        loadExample();    // fill example values
+        setTimeout(predictNow, 500);  // predict after a short delay
+      } else if (++checkCount > 50) {
+        clearInterval(waitForModel);
+        console.warn('Model did not load within expected time.');
+      }
+    }, 200);
+  });
 </script>
 </body>
 </html>
