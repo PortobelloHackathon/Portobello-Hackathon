@@ -74,21 +74,7 @@
               </table>
             </div>
 
-            <div>
-              <h4 class="text-md font-medium text-slate-700 mb-2">Volume across steps</h4>
-              <div class="rounded border bg-white p-3">
-                <canvas id="volumeChart" class="w-full h-64"></canvas>
-              </div>
-            </div>
-            
-            <div class="mt-6">
-              <h4 class="text-md font-medium text-slate-700 mb-2">Loss per item</h4>
-              <div class="rounded border bg-white p-3 mb-2">
-                <canvas id="lossChart" class="w-full h-48"></canvas>
-              </div>
-              <div id="categoryLegend" class="flex gap-3 flex-wrap text-sm"></div>
-            </div>
-            
+            <!-- Volume and loss charts removed per request -->
             <!-- Modal: select datetime -->
             <div id="dtModal" class="fixed inset-0 hidden items-center justify-center bg-black bg-opacity-40">
               <div class="bg-white rounded p-4 w-96">
@@ -101,12 +87,7 @@
               </div>
             </div>
 
-            <div class="mt-4">
-              <h4 class="text-md font-medium text-slate-700 mb-2">Selected timestamp: categories</h4>
-              <div class="rounded border bg-white p-3 mb-2">
-                <canvas id="categoryBarChart" class="w-full h-48"></canvas>
-              </div>
-            </div>
+            <!-- Category bar chart removed per request -->
           </section>
         </div>
       </div>
@@ -132,19 +113,13 @@
     const warn = document.getElementById('warnMissing');
     const tableHead = document.getElementById('dataTableHead');
     const tableBody = document.getElementById('dataTableBody');
-    const volumeCtx = document.getElementById('volumeChart');
-  let volumeChart = null;
-  const lossCtx = document.getElementById('lossChart');
-  let lossChart = null;
-  const legendEl = document.getElementById('categoryLegend');
-  const dtModal = document.getElementById('dtModal');
-  const datetimeSelect = document.getElementById('datetimeSelect');
-  const chooseDatetime = document.getElementById('chooseDatetime');
-  const dtCancel = document.getElementById('dtCancel');
-  const dtView = document.getElementById('dtView');
-  const dataStatus = document.getElementById('dataStatus');
-  const categoryBarCtx = document.getElementById('categoryBarChart');
-  let csvData = null; // parsed CSV
+    const dtModal = document.getElementById('dtModal');
+    const datetimeSelect = document.getElementById('datetimeSelect');
+    const chooseDatetime = document.getElementById('chooseDatetime');
+    const dtCancel = document.getElementById('dtCancel');
+    const dtView = document.getElementById('dtView');
+    const dataStatus = document.getElementById('dataStatus');
+    let csvData = null; // parsed CSV
 
     function clearTable() {
       tableHead.innerHTML = '';
@@ -157,9 +132,15 @@
     }
 
     function detectVolumeColumns(columns) {
-      // prefer explicit order: vol_start, vol_press, vol_glaze, vol_kiln_out
-      const preferred = ['vol_start','vol_press','vol_glaze','vol_kiln_out'];
-      const found = preferred.filter(c => columns.includes(c));
+      // prefer explicit order: vol_start, vol_press, vol_glaze, vol_kiln_out, vol_sort_out
+      const aliasGroups = [
+        ['vol_start'],
+        ['vol_press','vol_press_out'],
+        ['vol_glaze','vol_glaze_out'],
+        ['vol_kiln_out'],
+        ['vol_sort_out']
+      ];
+      const found = aliasGroups.map(group => group.find(g => columns.includes(g))).filter(Boolean);
       // also include any other vol_ columns present in header order
       const others = columns.filter(c => c.startsWith('vol_') && !found.includes(c));
       return found.concat(others);
@@ -171,81 +152,7 @@
       return Number.isFinite(n) ? n : NaN;
     }
 
-    function buildVolumeChart(rows, volCols, labelCol) {
-      const datasets = rows.map(r => {
-        const label = labelCol ? (r[labelCol] || 'item') : (r[Object.keys(r)[0]] || 'item');
-        const data = volCols.map(c => toNumber(r[c]));
-        return { label, data, tension: 0.2, fill: false };
-      });
-
-      const labels = volCols.map(c => c.replace('vol_','').replace(/_/g,' '));
-
-      if (volumeChart) volumeChart.destroy();
-      volumeChart = new Chart(volumeCtx, {
-        type: 'line',
-        data: { labels, datasets },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
-      });
-    }
-
-    // Simple categorical palette
-    const PALETTE = ['#0B1F52','#1F77B4','#2CA02C','#FF7F0E','#D62728','#9467BD','#8C564B','#E377C2','#7F7F7F','#BCBD22'];
-
-    function pickCategoryColumn(columns) {
-      const candidates = ['Category','category','Type','type','Group','group'];
-      return columns.find(c => candidates.includes(c)) || null;
-    }
-
-    function buildLossChart(rows, volCols, labelCol, categoryCol) {
-      if (!volCols || volCols.length < 2) {
-        if (lossChart) { lossChart.destroy(); lossChart = null; }
-        legendEl.innerHTML = '';
-        return;
-      }
-
-      const first = volCols[0];
-      const last = volCols[volCols.length - 1];
-      const labels = rows.map(r => r[labelCol] || r[Object.keys(r)[0]] || 'item');
-      const losses = rows.map(r => {
-        const a = toNumber(r[first]);
-        const b = toNumber(r[last]);
-        return Number.isFinite(a) && Number.isFinite(b) ? a - b : NaN;
-      });
-
-      // categories
-      const categories = [];
-      const catFor = rows.map(r => {
-        const cat = categoryCol ? (r[categoryCol] || 'Uncategorized') : 'Uncategorized';
-        if (!categories.includes(cat)) categories.push(cat);
-        return cat;
-      });
-
-      const catColor = {};
-      categories.forEach((c,i) => catColor[c] = PALETTE[i % PALETTE.length]);
-      const bg = catFor.map(c => catColor[c]);
-
-      if (lossChart) lossChart.destroy();
-      lossChart = new Chart(lossCtx, {
-        type: 'bar',
-        data: { labels, datasets: [{ label: 'Loss', data: losses, backgroundColor: bg }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-      });
-
-      // legend
-      legendEl.innerHTML = '';
-      categories.forEach(cat => {
-        const sw = document.createElement('button');
-        sw.type = 'button';
-        sw.className = 'flex items-center gap-2 px-2 py-1 rounded';
-        sw.innerHTML = `<span style="width:14px;height:14px;background:${catColor[cat]};display:inline-block;border-radius:3px;"></span><span>${cat}</span>`;
-        sw.addEventListener('click', () => {
-          const newBg = catFor.map(c => c === cat ? catColor[c] : '#e6e6e6');
-          lossChart.data.datasets[0].backgroundColor = newBg;
-          lossChart.update();
-        });
-        legendEl.appendChild(sw);
-      });
-    }
+    // Charts removed per request: volume, loss and category charts have been removed from the UI and JS
 
     function handleParsed(result) {
       const { columns, rows } = result;
@@ -254,10 +161,7 @@
 
       const volCols = detectVolumeColumns(columns);
       if (volCols.length === 0) {
-        warn.textContent = 'No volume columns (vol_*) detected. Expected columns: vol_start, vol_press, vol_glaze, vol_kiln_out.';
-        if (volumeChart) { volumeChart.destroy(); volumeChart = null; }
-        if (lossChart) { lossChart.destroy(); lossChart = null; }
-        legendEl.innerHTML = '';
+        warn.textContent = 'No volume columns (vol_*) detected. Expected columns: vol_start, vol_press, vol_glaze, vol_kiln_out, vol_sort_out.';
         return;
       }
       warn.textContent = '';
@@ -266,10 +170,6 @@
       const labelCandidates = ['Item','item','Name','name','SKU','sku','id','ID'];
       const labelCol = columns.find(c => labelCandidates.includes(c)) || columns[0];
 
-      const categoryCol = pickCategoryColumn(columns);
-
-      buildVolumeChart(rows, volCols, labelCol);
-      buildLossChart(rows, volCols, labelCol, categoryCol);
       // populate datetime select if 'datetime' column exists
       if (columns.includes('datetime')) {
         datetimeSelect.innerHTML = '';
@@ -296,15 +196,7 @@
       if(rows.length===0){ warn.textContent='No data for selected timestamp'; return; }
       // render table with only selected rows
       renderTable(csvData.columns, rows);
-      // build category bar chart for the selected timestamp: show specified vol columns
-      const volCols = detectVolumeColumns(csvData.columns);
-      const desired = ['vol_start','vol_press','vol_glaze','vol_kiln_out','vol_sort_out'];
-      const present = desired.filter(c=>volCols.includes(c));
-      const label = ts;
-      const values = present.map(c=> toNumber(rows[0][c]) );
-      // grey coloring for these categories
-      const bg = present.map(()=> '#e6e6e6');
-      new Chart(categoryBarCtx, { type:'bar', data:{ labels: present.map(p=>p.replace('vol_','').replace(/_/g,' ')), datasets:[{ label, data: values, backgroundColor: bg }] }, options:{ responsive:true, maintainAspectRatio:false } });
+      // Charts removed: just render the table for the selected timestamp
       dtModal.classList.add('hidden'); dtModal.classList.remove('flex');
     });
   </script>
