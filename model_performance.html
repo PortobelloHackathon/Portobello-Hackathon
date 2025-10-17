@@ -54,8 +54,7 @@
         <div class="flex items-center justify-between">
           <h2 class="text-3xl font-semibold tracking-tight text-slate-900">Model Performance</h2>
           <div class="flex items-center gap-3">
-            <label class="text-sm text-slate-600">Upload eval file:</label>
-            <input id="evalFile" type="file" accept=".csv" class="text-xs bg-white border border-slate-300 rounded px-2 py-1">
+            <!-- Upload control removed: eval is loaded from repository file automatically -->
           </div>
         </div>
 
@@ -200,10 +199,7 @@
       loadFlags();
     })();
 
-    $('evalFile').addEventListener('change', async e=>{
-      const file=e.target.files[0]; if(!file)return;
-      const txt=await file.text(); loadEval(txt);
-    });
+    // Upload handler removed; eval data is loaded automatically from tiles_predictions_eval.csv in the repo
     $('reloadFlags').addEventListener('click', loadFlags);
   </script>
 </body>
